@@ -4,6 +4,8 @@ export const uploadProfile = async (req, res) => {
   try {
     const { userId } = req.body;
 
+    console.log("uploadController.js / 5", userId);
+
     // check file
     if (!req.file) {
       return res.status(400).json({
@@ -12,7 +14,7 @@ export const uploadProfile = async (req, res) => {
     }
 
     // build image URL
-    const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+    const baseUrl = process.env.UPLOAD_IMG_URL;
     const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
     // update user
     const updatedUser = await User.findByIdAndUpdate(

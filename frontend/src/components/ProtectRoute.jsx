@@ -5,7 +5,6 @@ import { useAuth } from "../context/AuthContext";
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
 
-  console.log("this is protected route", user);
 
 
   if (!user) {

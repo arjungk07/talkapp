@@ -1,40 +1,37 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import WhatsAppHeader from "../components/WhatsAppHeader";
 import Sidebar from "../components/Sidebar";
 import ChatWindow from "../components/ChatWindow";
+import { useAuth } from "../context/AuthContext";
+import { useParams } from "react-router-dom";
+
+
 
 const Home = () => {
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [mobileView, setMobileView] = useState("sidebar"); // "sidebar" | "chat"
 
-  const handleSelectUser = (user) => {
-    setSelectedUser(user);
-    setMobileView("chat");
-  };
+  const { selectedUser , setSelectedUser } = useAuth();
 
-  const handleBack = () => {
-    setMobileView("sidebar");
-  };
+  const {id} = useParams();
+
+  
+  useEffect(() => {
+
+    if(!id){
+      setSelectedUser(null);
+      console.log("setselected user to null")
+    }
+
+  }, [id]);
+
 
   return (
     <div className="h-screen flex overflow-hidden bg-chat-bg">
+
       <WhatsAppHeader />
+      <Sidebar className={`${selectedUser ? "hidden md:block" : "block "} md:w-[350px]`} />
+      <ChatWindow className="hidden md:flex-1 md:flex md:flex-col" />
 
-      {/* Sidebar — full width on mobile, fixed width on desktop */}
-      <div className={`
-        ${mobileView === "chat" ? "hidden" : "flex"}
-         w-full lg:w-80 shrink-0
-      `}>
-        <Sidebar selectedUser={selectedUser} onSelectUser={handleSelectUser} />
-      </div>
 
-      {/* Chat Window — hidden on mobile when sidebar is shown */}
-      <div className={`
-        ${mobileView === "sidebar" ? "hidden" : "flex"}
-        lg:flex flex-1
-      `}>
-        <ChatWindow selectedUser={selectedUser} onBack={handleBack} />
-      </div>
     </div>
   );
 };
