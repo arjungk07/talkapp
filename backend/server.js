@@ -75,7 +75,7 @@ app.use("/api/messages", messageRoutes);
 
 // ✅ Health check
 app.get("/", (req, res) => {
-  res.json({ message: "ChatApp API is running 🚀", status: "OK" });
+  res.json({ message: "TalkApp API is running 🚀", status: "OK" });
 });
 
 // ✅ 404 handler

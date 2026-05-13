@@ -4,43 +4,31 @@ export const uploadProfile = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    console.log("uploadController.js / 5", userId);
-
-    // check file
     if (!req.file) {
-      return res.status(400).json({
-        message: "No file uploaded",
-      });
+      return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // build image URL
-    const baseUrl = process.env.UPLOAD_IMG_URL;
-    const imageUrl = `${baseUrl}/uploads/${req.file.filename}`;
-    // update user
+    // With CloudinaryStorage, the URL is in req.file.path or req.file.path
+    const imageUrl = req.file.path; 
+
+    // Update the user's profile picture in the database
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { profilePic: imageUrl },
       { new: true }
     );
 
-    console.log("uploadController.js / 24", updatedUser);
-
     if (!updatedUser) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
     return res.status(200).json({
-      message: "Profile updated",
+      message: "Image uploaded to assets folder successfully",
       imageUrl,
       user: updatedUser,
     });
-
   } catch (error) {
     console.error("Upload error:", error);
-    res.status(500).json({
-      message: "Server error",
-    });
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };

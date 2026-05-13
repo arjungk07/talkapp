@@ -14,12 +14,12 @@ export const useMessages = (selectedUser) => {
   // Fetch messages when a user is selected
   const fetchMessages = useCallback(async () => {
     if (!selectedUser) {
-    console.log("usemessage.js / 16",selectedUser);
     return;
   }
     setLoading(true);
     try {
       const { data } = await api.get(`/api/messages/${selectedUser._id}`);
+      console.log("usemessage.js / 24",data)
       setMessages(data);
       console.log("usemessage.js / 26",messages)
     } catch (err) {
@@ -39,7 +39,6 @@ export const useMessages = (selectedUser) => {
     if (!socket || !selectedUser) return;
 
     const handleNewMessage = (message) => {
-      console.log("usemessage.js / 40",message)
       const isRelevant =
         (message.senderId === selectedUser._id && message.receiverId === user._id) ||
         (message.senderId === user._id && message.receiverId === selectedUser._id);
@@ -79,7 +78,7 @@ export const useMessages = (selectedUser) => {
     };
   }, [socket, selectedUser]);
 
-  const sendMessage = async (text) => {
+  const sendMessage = async (text, isActive) => {
     if (!text.trim() || !selectedUser || sending) return;
 
     setSending(true);
@@ -87,15 +86,24 @@ export const useMessages = (selectedUser) => {
       const { data } = await api.post("/api/messages", {
         receiverId: selectedUser._id,
         text: text.trim(),
+        isActive: isActive,
       });
 
-      setMessages((prev) => [...prev, data]);
+      // 2. Update local UI with the user's message
+      setMessages((prev) => [...prev, data.userMessage]);
 
-      // Emit real-time message via socket
+      // 3. If AI was enabled and gave a reply, add that too
+      if (data.aiReply) {
+        setMessages((prev) => [...prev, data.aiReply]);
+      }
+
+      // 4. Emit real-time message via socket
       socket?.emit("sendMessage", {
-        message: data,
+        message: data.userMessage,
         receiverId: selectedUser._id,
+        aiReply: data.aiReply || null, // Optional: let the recipient see the AI reply too
       });
+
     } catch (err) {
       toast.error("Failed to send message");
     } finally {
@@ -114,7 +122,7 @@ export const useMessages = (selectedUser) => {
     socket?.emit("stopTyping", {
       receiverId: selectedUser?._id,
       senderId: user?._id,
-    });
+    }); 
   };
 
   return { messages, loading, sending, isTyping, sendMessage, emitTyping, emitStopTyping };

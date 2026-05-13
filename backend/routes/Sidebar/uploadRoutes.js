@@ -1,10 +1,10 @@
-import express from "express";
-import upload from "../../middleware/upload.js";
-import { uploadProfile } from "../../controllers/uploadController.js";
+import express from 'express';
+import upload from '../../middleware/multer.js';
+import { uploadProfile } from '../../controllers/uploadController.js';
 
 const router = express.Router();
 
-// 🔥 IMPORTANT: "profile" must match frontend
+// 'profile' is the field name for the image file
 router.post("/upload-profile", upload.single("profile"), uploadProfile);
 
 export default router;

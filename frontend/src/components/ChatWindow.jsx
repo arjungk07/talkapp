@@ -5,16 +5,17 @@ import { FaUserAlt } from "react-icons/fa";
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 import { formatDistanceToNow } from "date-fns";
+import ai from '../assets/image/talk_ai_icon.png';
 
 const ChatWindow = ({ className }) => {
   const { onlineUsers, selectedUser } = useAuth();
 
 
 
-  console.log("selected user in chatwindow", selectedUser);
   const { messages, loading, sending, isTyping, sendMessage, emitTyping, emitStopTyping } =
     useMessages(selectedUser);
   const [text, setText] = useState("");
+  const [isActive, setIsActive] = useState(false);
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const isOnline = onlineUsers.includes(selectedUser?._id);
@@ -26,12 +27,16 @@ const ChatWindow = ({ className }) => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  const handleClick = () => {
+    setIsActive(!isActive);
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!text.trim()) return;
     clearTimeout(typingTimeoutRef.current);
     emitStopTyping();
-    await sendMessage(text);
+    await sendMessage(text,isActive);
     setText("");
   };
 
@@ -50,8 +55,12 @@ const ChatWindow = ({ className }) => {
   };
 
 
+  
 
 
+
+
+  
   // No user selected — only visible on desktop (parent hides this on mobile)
   if (!selectedUser) {
     return (
@@ -75,12 +84,11 @@ const ChatWindow = ({ className }) => {
 
     <div className="flex flex-1 h-screen w-full overflow-hidden bg-chat-bg">
 
-
       {/* MAIN CHAT WINDOW */}
       <div className="flex flex-col flex-1 h-full relative overflow-hidden">
 
         {/* CHAT HEADER: Styled to stay at the top without 'fixed' to avoid overlap issues */}
-        <header className="px-4 lg:px-6 py-4 border-b border-chat-border bg-chat-panel flex items-center gap-3 shrink-0 z-10">
+        <header className="px-4 lg:px-6 py-4 border-b border-chat-border bg-chat-panel flex items-center  gap-3 shrink-0 z-10">
           <div className="relative">
 
             {selectedUser.profilePic ? (
@@ -113,9 +121,17 @@ const ChatWindow = ({ className }) => {
             </p>
           </div>
 
-          <div className="px-2 py-1 rounded-lg bg-chat-surface border border-chat-border">
-            <span className="text-xs text-chat-muted font-mono">{messages.length} msgs</span>
-          </div>
+
+          <button
+            onClick={handleClick}
+            className={`p-1 rounded-full font-bold transition-colors ${isActive
+                ? 'bg-green-500 text-white' // Styles for Deactivate mode
+                : 'bg-gray-500 text-white' // Styles for Activate mode
+              }`}
+          >
+            <img src={ai} alt="ai" className="w-7 h-7 rounded-full" />
+            {/* {isActive ? 'Deactivate' : 'Activate'} */}
+          </button>
         </header>
 
         {/* MESSAGES AREA: flex-1 and overflow-y-auto ensures it scrolls while header/input stay put */}
@@ -160,7 +176,7 @@ const ChatWindow = ({ className }) => {
                 value={text}
                 onChange={handleTyping}
                 onKeyDown={handleKeyDown}
-                placeholder={`Message ${selectedUser.name}...`}
+                placeholder={`Message to ${selectedUser.name}...`}
                 maxLength={2000}
                 className="w-full bg-chat-surface border border-chat-border rounded-2xl px-5 py-3 text-chat-text placeholder-chat-muted focus:outline-none focus:border-chat-accent focus:ring-1 focus:ring-chat-accent transition-all text-sm pr-12"
               />

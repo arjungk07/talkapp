@@ -7,4 +7,5 @@ router.get("/unread", protect, getUnreadCounts);
 router.get("/:userId", protect, getMessages);
 router.post("/", protect, sendMessage);
 
+
 export default router;    

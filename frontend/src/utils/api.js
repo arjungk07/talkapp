@@ -4,9 +4,10 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_API_URL || "http://localhost:5000",
 });
 
+
 // Attach JWT token to every request
 api.interceptors.request.use((config) => {
-  const storedData = localStorage.getItem("chatapp-user");
+  const storedData = localStorage.getItem("talkapp-user");
   
   // Guard against "undefined" strings or null values
   if (storedData && storedData !== "undefined") {
@@ -27,8 +28,8 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem("chatapp-user");
-      window.location.href = "/login";
+      localStorage.removeItem("talkapp-user");
+      window.location.href = "/talkapp/login";
     }
     return Promise.reject(err);
   }

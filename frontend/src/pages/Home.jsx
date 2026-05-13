@@ -18,17 +18,18 @@ const Home = () => {
 
     if(!id){
       setSelectedUser(null);
-      console.log("setselected user to null")
     }
 
   }, [id]);
 
+  
+
 
   return (
-    <div className="h-screen flex overflow-hidden bg-chat-bg">
+    <div className="h-screen md:flex overflow-hidden bg-chat-bg">
 
-      <WhatsAppHeader />
-      <Sidebar className={`${selectedUser ? "hidden md:block" : "block "} md:w-[350px]`} />
+      <WhatsAppHeader className={`${selectedUser ? "hidden" : "block"}`}/>
+      <Sidebar className={`${selectedUser ? "hidden md:block" : "block"} md:w-[350px]`} />
       <ChatWindow className="hidden md:flex-1 md:flex md:flex-col" />
 
 

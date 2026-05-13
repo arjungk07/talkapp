@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
 
   const getInitialState = () => {
     try {
-      const item = window.localStorage.getItem("chatapp-user");
+      const item = window.localStorage.getItem("talkapp-user");
       // Handle the case where the string itself is "undefined"
       if (!item || item === "undefined") return null;
       return JSON.parse(item);
@@ -18,11 +18,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const [user, setUser] = useState(getInitialState);
+  const [profileImage, setProfileImage] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
   useEffect(() => {
+    
+    
+    
     if (user) {
       const s = initSocket(user._id);
       setSocket(s);
@@ -40,21 +44,23 @@ export const AuthProvider = ({ children }) => {
       setSocket(null);
       setOnlineUsers([]);
     }
+
+
   }, [user]);
 
   const login = (userData) => {
-    localStorage.setItem("chatapp-user", JSON.stringify(userData));
+    localStorage.setItem("talkapp-user", JSON.stringify(userData));
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem("chatapp-user");
+    localStorage.removeItem("talkapp-user");
     setUser(null);
     disconnectSocket();
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, socket, onlineUsers , selectedUser, setSelectedUser }}>
+    <AuthContext.Provider value={{ user, login, logout, socket, onlineUsers, selectedUser, setSelectedUser, profileImage, setProfileImage }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { FaUserAlt } from "react-icons/fa";
@@ -7,115 +7,128 @@ import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
 import LogOut from './LogOut';
 
-const Sidebar = ({className }) => {
-  const { user, logout, onlineUsers ,selectedUser, setSelectedUser} = useAuth();
+const Sidebar = ({ className }) => {
+  const { onlineUsers, selectedUser, setSelectedUser } = useAuth();
   const navigate = useNavigate();
+
+  // --- State Management ---
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // --- Pagination State ---
-  const [visibleCount, setVisibleCount] = useState(20);
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const observerTarget = useRef(null);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const { data } = await api.get("/api/users");
-        setUsers(data);
-      } catch (err) {
-        toast.error("Failed to load contacts");
-      } finally {
-        setLoading(false);
+  /**
+   * Core Fetch Function
+   * Fetches data and appends it to the existing list
+   */
+  const fetchUsers = useCallback(async (pageNum, searchQuery = "") => {
+    if (loading) return;
+
+    setLoading(true);
+
+    try {
+      // API call expects: /api/users?page=1&limit=20&search=abc
+      const { data } = await api.get(`/api/users`, {
+        params: {
+          page: pageNum,
+          limit: 20,
+          search: searchQuery
+        }
+      });
+
+      // If we get fewer than 20 users, we've reached the end
+      if (data.length < 20) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
       }
-    };
-    fetchUsers();
-  }, []);
 
-  // Filtered list based on search
-  const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+      setUsers((prev) => {
+        // If it's page 1, replace the list (useful for search resets)
+        if (pageNum === 1) return data;
 
-  // The slice of users actually visible in the DOM
-  const displayedUsers = filteredUsers.slice(0, visibleCount);
+        // Otherwise, append and prevent duplicates using a Map
+        const combined = [...prev, ...data];
+        const unique = Array.from(new Map(combined.map(item => [item._id, item])).values());
+        console.log("unique", unique);
+        toast.success("Contacts loaded successfully", { id: "contacts-loaded" });
+        return unique;
+      });
 
-  // Reset pagination when search changes
+    } catch (err) {
+      toast.error("Failed to load contacts");
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setInitialLoading(false);
+    }
+  }, [loading]);
+
+  // Handle Initial Load & Search
   useEffect(() => {
-    setVisibleCount(20);
-  }, [search]);
+    setPage(1);
+    setHasMore(true);
+    fetchUsers(1, search);
+  }, [search]); // Re-run when search changes
 
-  // --- Intersection Observer Logic ---
+  // Intersection Observer Logic
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleCount < filteredUsers.length) {
-          setVisibleCount((prev) => prev + 20);
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchUsers(nextPage, search);
         }
       },
-      { threshold: 0.1, rootMargin: "50px" } // Load a bit before reaching the exact end
+      { threshold: 1.0 }
     );
 
     if (observerTarget.current) {
       observer.observe(observerTarget.current);
     }
 
-    return () => {
-      if (observerTarget.current) observer.disconnect();
-    };
-  }, [displayedUsers, filteredUsers.length]);
+    return () => observer.disconnect();
+  }, [hasMore, loading, page, search, fetchUsers]);
+
+  const filteredUsers = users.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    u.email.toLowerCase().includes(search.toLowerCase())
+  );
 
   const isOnline = (userId) => onlineUsers.includes(userId);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-const handleSelectUser = (u) => {
-    // 1. Log to verify the click is actually firing
-    console.log("Selected User ID:", u._id);
-    
-    // 2. Update parent state
+  const handleSelectUser = (u) => {
     setSelectedUser(u);
-    localStorage.setItem("selectedUser", JSON.stringify(u));
-
-    console.log("selected user in sidebar:",selectedUser)
-    
-    // 3. Navigate
-    // Note: If you are already on this route, navigate might not trigger a refresh
     navigate(`/chat/${u._id}`);
-
-    
     toast.success(`Chatting with ${u.name}`, { id: "user-select-toast" });
   };
 
   return (
     <div className={`${className} flex flex-col w-full h-full bg-chat-sidebar border-r border-chat-border overflow-hidden`}>
       {/* Header */}
-      <div className="p-5">
-        <div className="flex justify-between items-center">
-          <div className="flex justify-center items-center">
-            <p className="text-2xl block md:hidden talkapp-font font-semibold text-chat-text">TalkApp</p>
-            <p className="text-xl hidden md:block talkapp-font font-semibold text-chat-text">Chats</p>
-          </div>
-
-          <div className="flex justify-center items-center">
-            <button
-              onClick={() => setIsLogoutModalOpen(true)}
-              title="Logout"
-              className="p-2 rounded-lg cursor-pointer text-chat-muted hover:text-chat-text hover:bg-chat-surface transition-all"
-            >
-              <svg className="w-6 h-6 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-            <LogOut
-              isOpen={isLogoutModalOpen}
-              onClose={() => setIsLogoutModalOpen(false)}
-            />
-          </div>
+      <div className="px-4 md:p-5 shrink-0">
+        <div className="hidden md:flex justify-between items-center">
+          <p className="text-xl talkapp-font font-semibold text-chat-text">Chats</p>
+          <button
+            onClick={() => setIsLogoutModalOpen(true)}
+            className="p-2 rounded-lg text-chat-muted hover:bg-chat-surface transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+          <LogOut isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} />
         </div>
 
-        {/* Search */}
-        <div className="relative top-3">
+        {/* Search Input */}
+        <div className="relative mt-4">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-chat-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -124,95 +137,92 @@ const handleSelectUser = (u) => {
             placeholder="Search contacts..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-chat-panel border talkapp-font font-medium border-chat-border rounded-full pl-9 pr-4 py-2.5 text-chat-text placeholder-chat-muted focus:outline-none focus:border-chat-accent/50 text-sm transition-all"
+            className="w-full bg-chat-panel border border-chat-border rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-chat-accent/50 transition-all"
           />
         </div>
+
       </div>
 
-      {/* Contacts label */}
-      <div className="px-5 py-4 shrink-0">
-        <span className="text-md md:text-lg talkapp-font font-medium text-chat-muted tracking-wider">
-          Contacts ({filteredUsers.length})
-        </span>
-      </div>
-
-      {/* User list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {loading ? (
-          <div className="flex flex-col gap-3 p-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl">
-                <div className="w-11 h-11 rounded-full bg-chat-surface animate-pulse" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-chat-surface rounded animate-pulse w-2/3" />
-                  <div className="h-2 bg-chat-surface rounded animate-pulse w-1/2" />
-                </div>
+      {/* User List Container */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-2">
+        {initialLoading && users.length === 0 ? (
+          /* Skeleton Loader */
+          <div className="space-y-3 p-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-12 h-12 rounded-full bg-chat-surface" />
+                <div className="flex-1 space-y-2"><div className="h-3 bg-chat-surface rounded w-3/4" /></div>
               </div>
             ))}
           </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-chat-muted">
-            <svg className="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
-            </svg>
-            <p className="text-sm">No contacts found</p>
-          </div>
-        ) : (
-          <div className="px-2 pb-4">
-            {displayedUsers.map((u) => (
-              <button
-                type="button"
-                key={u._id}
-                onClick={() => { handleSelectUser(u) }}
-                className={`w-full flex items-center cursor-pointer gap-5 p-3 rounded-xl mb-1 text-left transition-all duration-150 ${selectedUser?._id === u._id
-                  ? "bg-chat-accent/30 border border-chat-accent/50"
-                  : "hover:bg-chat-surface"
-                  }`}
-              >
-                <div className="relative shrink-0">
-                  {u.profilePic ? (
-                    <img
-                      src={u.profilePic}
-                      alt={u.name}
-                      className="w-11 h-11 rounded-full bg-chat-surface border border-chat-border"
-                    />
-                  ) : (
-                    <FaUserAlt className="w-11 h-11 p-1 rounded-full bg-chat-surface text-chat-muted border border-chat-border" />
-                  )}
-
-                  {isOnline(u._id) && (
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-chat-online rounded-full border-2 border-chat-sidebar" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-chat-text text-sm truncate">{u.name}</p>
-                  </div>
-                  <p className="text-xs text-chat-muted truncate mt-0.5">
-                    {isOnline(u._id) ? (
-                      <span className="text-chat-online">● Active now</span>
-                    ) : u.lastSeen ? (
-                      `Last seen ${formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true })}`
+        ) : users.length === 0 ? (
+          <div className="text-center py-10 text-chat-muted text-sm">No contacts found</div>
+        ) :
+          filteredUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-32 text-chat-muted">
+              <svg className="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
+              </svg>
+              <p className="text-sm">No contacts found</p>
+            </div>
+          ) : (
+            <>
+              {users.map((u) => (
+                <button
+                  type="button"
+                  key={u._id}
+                  onClick={() => handleSelectUser(u)}
+                  className={`w-full flex items-center gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-accent/20" : "hover:bg-chat-surface"
+                    }`}
+                >
+                  <div className="relative shrink-0">
+                    {u.profilePic ? (
+                      <img src={u.profilePic} alt="" className="w-12 h-12 rounded-full object-cover border border-chat-border" />
                     ) : (
-                      u.email
+                      <FaUserAlt className="w-12 h-12 p-2 rounded-full bg-chat-surface text-chat-muted border border-chat-border" />
                     )}
-                  </p>
-                </div>
-              </button>
-            ))}
+                    {isOnline(u._id) && (
+                      <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-chat-online rounded-full border-2 border-chat-sidebar" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-chat-text text-sm truncate">
+                      {search ? (
+                        u.name.split(new RegExp(`(${search})`, "gi")).map((part, index) =>
+                          part.toLowerCase() === search.toLowerCase() ? (
+                            <span key={index} className="text-emerald-400 font-bold">
+                              {part}
+                            </span>
+                          ) : (
+                            <span key={index}>{part}</span>
+                          )
+                        )
+                      ) : (
+                        u.name
+                      )}
+                    </p>                  <p className="text-xs text-chat-muted truncate">
+                      {isOnline(u._id) ? "Active now" : u.lastSeen ? `Seen ${formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true })}` : u.email}
+                    </p>
+                  </div>
+                </button>
+              ))}
 
-            {/* THE SENTINEL: Detects when user reaches bottom */}
-            {visibleCount < filteredUsers.length && (
-              <div
-                ref={observerTarget}
-                className="h-10 flex items-center justify-center w-full"
-              >
-                <div className="w-5 h-5 border-2 border-chat-accent border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </div>
-        )}
+              {/* Pagination Sentinel */}
+              {hasMore && (
+                <div ref={observerTarget} className="py-6 flex justify-center w-full">
+                  <div className="w-6 h-6 border-2 border-chat-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              {!hasMore && users.length > 0 && (
+                <p className="text-center text-[10px] text-chat-muted py-4 uppercase tracking-widest opacity-50">
+                  All contacts loaded
+                </p>
+              )}
+            </>
+          )}
       </div>
+
     </div>
   );
 };
