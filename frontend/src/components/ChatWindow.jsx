@@ -7,7 +7,7 @@ import TypingIndicator from "./TypingIndicator";
 import { formatDistanceToNow } from "date-fns";
 import ai from '../assets/image/talk_ai_icon.png';
 
-const ChatWindow = ({ className }) => {
+const ChatWindow = ({ className }) => {{}
   const { onlineUsers, selectedUser } = useAuth();
 
 
@@ -19,7 +19,6 @@ const ChatWindow = ({ className }) => {
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const isOnline = onlineUsers.includes(selectedUser?._id);
-
 
 
 
@@ -36,7 +35,7 @@ const ChatWindow = ({ className }) => {
     if (!text.trim()) return;
     clearTimeout(typingTimeoutRef.current);
     emitStopTyping();
-    await sendMessage(text,isActive);
+    await sendMessage(text, isActive);
     setText("");
   };
 
@@ -55,12 +54,7 @@ const ChatWindow = ({ className }) => {
   };
 
 
-  
 
-
-
-
-  
   // No user selected — only visible on desktop (parent hides this on mobile)
   if (!selectedUser) {
     return (
@@ -102,7 +96,7 @@ const ChatWindow = ({ className }) => {
             )}
 
             {isOnline && (
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-chat-online rounded-full border-2 border-chat-panel" />
+              <span className="absolute bottom-0 right-0 w-2 h-2 bg-chat-online rounded-full border-2 border-chat-panel" />
             )}
           </div>
 
@@ -124,13 +118,27 @@ const ChatWindow = ({ className }) => {
 
           <button
             onClick={handleClick}
-            className={`p-1 rounded-full font-bold transition-colors ${isActive
-                ? 'bg-green-500 text-white' // Styles for Deactivate mode
-                : 'bg-gray-500 text-white' // Styles for Activate mode
-              }`}
+            className="relative flex items-center justify-center w-12 h-12"
           >
-            <img src={ai} alt="ai" className="w-7 h-7 rounded-full" />
-            {/* {isActive ? 'Deactivate' : 'Activate'} */}
+            {/* Rotating Gradient Border */}
+            {isActive && (
+              <div className="absolute inset-0 rounded-full animate-spin-slow">
+                <div className="w-full h-full bg-linear-to-r from-yellow-400 via-pink-500 to-purple-500 rounded-full"></div>
+              </div>
+            )}
+
+            {/* Glow Effect */}
+            {isActive && (
+              <div className="absolute w-14 h-14 rounded-full bg-yellow-400/20 blur-xl animate-pulse"></div>
+            )}
+
+            {/* AI Icon */}
+            <img
+              src={ai}
+              alt="ai"
+              className={`relative cursor-pointer z-10 w-8 h-8 rounded-full transition-all duration-500 ${isActive ? "scale-110" : "scale-100"
+                }`}
+            />
           </button>
         </header>
 
@@ -139,11 +147,8 @@ const ChatWindow = ({ className }) => {
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="flex flex-col items-center gap-3">
-                <svg className="animate-spin w-8 h-8 text-chat-accent" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
-                </svg>
-                <p className="text-chat-muted text-sm">Loading messages...</p>
+                <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
+                <p className="mt-4 font-medium text-black">Loading Messages...</p>
               </div>
             </div>
           ) : messages.length === 0 ? (
@@ -158,8 +163,8 @@ const ChatWindow = ({ className }) => {
             </div>
           ) : (
             <>
-              {messages.map((msg) => (
-                <MessageBubble key={msg._id} message={msg} />
+              {messages?.map((msg) => (
+                <MessageBubble key={msg?._id} message={msg} />
               ))}
               {isTyping && <TypingIndicator />}
             </>

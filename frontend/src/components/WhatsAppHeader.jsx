@@ -1,44 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Camera,  } from 'lucide-react'; // Using lucide-react for clean icons
+import { MoreVertical, Camera, } from 'lucide-react'; // Using lucide-react for clean icons
 import { MdMarkUnreadChatAlt } from "react-icons/md";
 import { CgProfile } from "react-icons/cg";
 import { GrGallery } from "react-icons/gr";
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
+import LogOut from '../components/LogOut';
+import { FiLogOut } from "react-icons/fi";
+
 
 
 
 // ---------------- MAIN HEADER COMPONENT ----------------
-const WhatsAppHeader = ({className}) => {
+const WhatsAppHeader = ({ className }) => {
     const [activeTab, setActiveTab] = useState('chats');
     const galleryRef = useRef();
 
     const profileRef = useRef();
     const { profileImage, setProfileImage, user } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
 
 
-    // 1. Function to simply fetch existing user data from DB
-    const loadUserData = async () => {
-        try {
-            setLoading(true);
-            // Assuming your backend has a route to get profile by ID
-            const res = await api.get(`/api/users/${user._id}`);
-            if (res.data.profilePic) {
-                setProfileImage(res.data.profilePic);
 
-                // Sync localStorage in case it was outdated
-                const updatedUser = { ...user, profilePic: res.data.profilePic };
-                localStorage.setItem("talkapp-user", JSON.stringify(updatedUser));
-            }
-        } catch (err) {
-            console.error("Error fetching user info:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+
 
     // 2. Modified Upload Function (now accepts formData as an argument)
     const uploadImage = async (formData) => {
@@ -48,6 +35,8 @@ const WhatsAppHeader = ({className}) => {
             const data = res.data;
 
             setProfileImage(data.imageUrl);
+
+            console.log("profile", profileImage)
 
             const updatedUser = { ...user, profilePic: data.imageUrl };
             localStorage.setItem("talkapp-user", JSON.stringify(updatedUser));
@@ -60,14 +49,7 @@ const WhatsAppHeader = ({className}) => {
         }
     };
 
-    // 3. Initial Load: Fetch data when component starts
-    useEffect(() => {
-        if (user?._id) {
-            loadUserData();
-        }
-    }, []);
 
-    // 4. Handle File Change: Prepare data and trigger upload
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -86,25 +68,41 @@ const WhatsAppHeader = ({className}) => {
     ];
 
 
+    const userProfileImage = profileImage || user?.profilePic;
+
 
     const MobileHeader = () => {
         return (
-            <header className="w-full h-fit px-4 py-3 select-none">
+            <header className="w-full h-fit px-5 py-3 select-none">
                 {/* Top Row: Wordmark and Action Icons */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-black text-xl font-semibold tracking-wide">
                         TalkApp
                     </h1>
 
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-3">
+
+                        {userProfileImage ? (
+                            <img src={userProfileImage} alt="profile" className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                            <CgProfile size={22} className="text-zinc-400" />
+                        )}
+
                         <button className="p-1 rounded-full cursor-pointer ">
                             <Camera size={22} />
                         </button>
-                        
+
 
                         <button className="p-1 rounded-full cursor-pointer">
                             <MoreVertical size={22} />
                         </button>
+
+
+                        <FiLogOut size={20} onClick={() => setIsLogoutModalOpen(true)} />
+
+                        <LogOut isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} />
+
+
                     </div>
                 </div>
             </header>
@@ -172,8 +170,8 @@ const WhatsAppHeader = ({className}) => {
                             onClick={() => profileRef.current.click()}
                             className="group relative cursor-pointer w-12 h-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 hover:border-yellow-400 transition-all"
                         >
-                            {user.profilePic ? (
-                                <img src={user.profilePic} alt="profile" className="w-full h-full object-cover" />
+                            {userProfileImage ? (
+                                <img src={userProfileImage} alt="profile" className="w-full h-full object-cover" />
                             ) : (
                                 <CgProfile size={25} className="text-zinc-400" />
                             )}

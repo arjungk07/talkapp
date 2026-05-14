@@ -14,17 +14,20 @@ export const useMessages = (selectedUser) => {
   // Fetch messages when a user is selected
   const fetchMessages = useCallback(async () => {
     if (!selectedUser) {
-    return;
-  }
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await api.get(`/api/messages/${selectedUser._id}`);
-      console.log("usemessage.js / 24",data)
+
       setMessages(data);
-      console.log("usemessage.js / 26",messages)
-    } catch (err) {
-      toast.error("Failed to load messages");
-    } finally {
+      // {isAi: false, _id: '6a05704cb94e5a48e5fdc75f', senderId:'69f82fa236d9704e8ac2d087', receiverId: '6a03dabd4e6309736cf7f400', text: 'veruthute', …}    } catch (err) {
+    }
+    catch(err){
+      console.log("Something Went wrong",data.message);
+      toast.error(err.response.data.message);
+    }
+     finally {
       setLoading(false);
     }
   }, [selectedUser]);
@@ -45,6 +48,7 @@ export const useMessages = (selectedUser) => {
 
       if (isRelevant) {
         setMessages((prev) => [...prev, message]);
+        console.log("newmessage from usemessages", message);
       }
     };
 
@@ -79,37 +83,45 @@ export const useMessages = (selectedUser) => {
   }, [socket, selectedUser]);
 
   const sendMessage = async (text, isActive) => {
-    if (!text.trim() || !selectedUser || sending) return;
+  if (!text.trim() || !selectedUser || sending) return;
 
-    setSending(true);
-    try {
-      const { data } = await api.post("/api/messages", {
-        receiverId: selectedUser._id,
-        text: text.trim(),
-        isActive: isActive,
-      });
+  setSending(true);
+  try {
+    const { data } = await api.post("/api/messages", {
+      receiverId: selectedUser._id,
+      text: text.trim(),
+      isActive: isActive,
+    });
 
-      // 2. Update local UI with the user's message
-      setMessages((prev) => [...prev, data.userMessage]);
+    // 1. Log to verify: Should be an array [...]
+    console.log("Data from API:", data);
 
-      // 3. If AI was enabled and gave a reply, add that too
-      if (data.aiReply) {
-        setMessages((prev) => [...prev, data.aiReply]);
+    // 2. Since backend always sends an array, spread it directly into state
+    // This works for [msg] (Normal) and [msg, aiReply] (AI Mode)
+    if (Array.isArray(data)) {
+      setMessages((prev) => [...prev, ...data]);
+
+      // 3. Prepare data for Socket Emit
+      const userMsg = data[0]; // The first object is always your message
+      const aiMsg = data.length > 1 ? data[1] : null; // Second object is AI (if exists)
+
+      // 4. Real-time Socket Emit
+      if (userMsg && userMsg._id) {
+        socket?.emit("sendMessage", {
+          message: userMsg,
+          receiverId: selectedUser._id,
+          aiReply: aiMsg, // Will be null if isAi is false
+        });
       }
-
-      // 4. Emit real-time message via socket
-      socket?.emit("sendMessage", {
-        message: data.userMessage,
-        receiverId: selectedUser._id,
-        aiReply: data.aiReply || null, // Optional: let the recipient see the AI reply too
-      });
-
-    } catch (err) {
-      toast.error("Failed to send message");
-    } finally {
-      setSending(false);
     }
-  };
+
+  } catch (err) {
+    console.error("Send error:", err);
+    toast.error("Failed to send message");
+  } finally {
+    setSending(false);
+  }
+};
 
   const emitTyping = () => {
     socket?.emit("typing", {
@@ -122,7 +134,7 @@ export const useMessages = (selectedUser) => {
     socket?.emit("stopTyping", {
       receiverId: selectedUser?._id,
       senderId: user?._id,
-    }); 
+    });
   };
 
   return { messages, loading, sending, isTyping, sendMessage, emitTyping, emitStopTyping };

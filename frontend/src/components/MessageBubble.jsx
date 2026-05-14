@@ -4,6 +4,14 @@ import { useAuth } from "../context/AuthContext";
 
 const MessageBubble = ({ message }) => {
   const { user } = useAuth();
+
+  // Guard Clause: If message data or auth user is missing, don't crash
+  if (!message || !message.senderId || !user) {
+    return null; 
+  }
+
+  // If I sent it, it's on the right. 
+  // If the AI (or another user) sent it, it's on the left.
   const isSent = message.senderId === user._id;
 
   return (
@@ -12,13 +20,10 @@ const MessageBubble = ({ message }) => {
         className={`
           group relative max-w-[70%]
           animate-bubble-pop
-          ${isSent
-            ? "items-end"
-            : "items-start"
-          }
+          flex flex-col
+          ${isSent ? "items-end" : "items-start"}
         `}
       >
-        {/* Ring bubble wrapper */}
         <div
           className={`
             relative px-4 py-2 
@@ -39,7 +44,8 @@ const MessageBubble = ({ message }) => {
           {/* Time + tick row */}
           <div className={`flex items-center gap-1 mt-0.5 ${isSent ? "justify-end" : "justify-start"}`}>
             <span className={`text-[10px] ${isSent ? "text-yellow-800/60" : "text-chat-muted"}`}>
-              {format(new Date(message.createdAt), "HH:mm")}
+              {/* Ensure date is valid before formatting */}
+              {message.createdAt ? format(new Date(message.createdAt), "HH:mm") : "--:--"}
             </span>
 
             {isSent && (

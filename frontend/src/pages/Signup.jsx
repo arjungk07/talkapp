@@ -4,13 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import toast from "react-hot-toast";
-import logo from '../assets/image/logo.png';
+import logo from '../assets/image/logo1.png';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
     email: '',
     name: '',
-    username:'',
+    username: '',
     password: '',
   });
 
@@ -31,7 +31,7 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const { email , name ,username ,password} = formData;
+    const { email, name, username, password } = formData;
 
     if (!email || !name || !username || !password) {
       return toast.error("All fields are required");
@@ -45,8 +45,7 @@ const Signup = () => {
       return toast.error("Name must be at least 3 characters");
     }
 
-    if(username.trim().length<3)
-    {
+    if (username.trim().length < 3) {
       return toast.error("Username must be at least 3 characters");
     }
 
@@ -96,19 +95,16 @@ const Signup = () => {
         </div>
       )}
 
-      <div className="w-full max-w-md flex flex-col gap-8">
+      <div className="w-full max-w-md flex flex-col gap-4 google-sans">
 
         {/* Header Section */}
-        <div className="flex flex-col items-center gap-6 text-center">
+        <div className="flex flex-col items-center gap-4 text-center">
           {/* Logo Placeholder */}
-          <div className="w-44 h-28 flex items-center justify-center ">
+          <div className="w-16 h-16 flex items-center justify-center ">
             <img src={logo} alt="Logo" />
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Create an account</h1>
-            <p className="text-gray-500"></p>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Create an account</h1>
 
           {/* Toggle Tabs (Matches Signup layout) */}
           <div className="flex w-full p-1 bg-gray-100 rounded-xl border border-gray-300">
@@ -135,7 +131,7 @@ const Signup = () => {
                 value={formData.email}
                 required
                 placeholder="Enter your email"
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
+                className="w-full text-sm px-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
                 onChange={handleChange}
               />
             </div>
@@ -150,7 +146,7 @@ const Signup = () => {
                 autoComplete='off'
                 required
                 placeholder="Enter your name"
-                className="w-full px-4 py-2.5  bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
+                className="w-full text-sm  px-4 py-2.5  bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
                 onChange={handleChange}
               />
             </div>
@@ -165,7 +161,7 @@ const Signup = () => {
                 autoComplete='off'
                 required
                 placeholder="Username"
-                className="w-full px-4 py-2.5  bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
+                className="w-full px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
                 onChange={handleChange}
               />
             </div>
@@ -181,7 +177,7 @@ const Signup = () => {
                   autoComplete='off'
                   required
                   placeholder="Create a password"
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
+                  className="w-full px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all placeholder:text-gray-400"
                   onChange={handleChange}
                 />
                 <button
@@ -195,7 +191,7 @@ const Signup = () => {
             </div>
 
             {/* Password Validation UI */}
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               {/* Minimum Length Requirement */}
               <div className="flex items-center gap-2">
                 <CheckCircle2

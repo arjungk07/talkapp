@@ -32,7 +32,6 @@ export const AuthProvider = ({ children }) => {
       setSocket(s);
 
       s.on("getOnlineUsers", (users) => {
-        console.log("authcontext.jsx / 32", users)
         setOnlineUsers(users);
       });
 

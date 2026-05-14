@@ -5,6 +5,7 @@ import { FaUserAlt } from "react-icons/fa";
 import api from "../utils/api";
 import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
+import { FiLogOut } from "react-icons/fi";
 import LogOut from './LogOut';
 
 const Sidebar = ({ className }) => {
@@ -116,14 +117,8 @@ const Sidebar = ({ className }) => {
       <div className="px-4 md:p-5 shrink-0">
         <div className="hidden md:flex justify-between items-center">
           <p className="text-xl talkapp-font font-semibold text-chat-text">Chats</p>
-          <button
-            onClick={() => setIsLogoutModalOpen(true)}
-            className="p-2 rounded-lg text-chat-muted hover:bg-chat-surface transition-all"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <FiLogOut size={20} onClick={() => setIsLogoutModalOpen(true)} className="cursor-pointer" />
+
           <LogOut isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} />
         </div>
 
@@ -172,7 +167,7 @@ const Sidebar = ({ className }) => {
                   type="button"
                   key={u._id}
                   onClick={() => handleSelectUser(u)}
-                  className={`w-full flex items-center gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-accent/20" : "hover:bg-chat-surface"
+                  className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-accent/20" : "hover:bg-chat-surface"
                     }`}
                 >
                   <div className="relative shrink-0">

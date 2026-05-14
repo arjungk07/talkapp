@@ -53,7 +53,7 @@ const Login = () => {
 
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-white px-4 py-12 md:px-8">
+    <section className="min-h-screen flex items-center justify-center p-5">
       
       {/* Full screen loading overlay */}
       {loading && (
@@ -63,18 +63,18 @@ const Login = () => {
         </div>
       )}
 
-      <div className="w-full max-w-md flex flex-col gap-8">
+      <div className="w-full max-w-md flex flex-col gap-6  google-sans">
         
         {/* Header Section */}
-        <div className="flex flex-col items-center gap-6 text-center">
+        <div className="flex flex-col items-center gap-1 md:gap-3 text-center">
           {/* Logo Placeholder (Matched to Signup) */}
-          <div className="w-44 h-28 flex items-center justify-center ">
+          <div className="w-16 h-16 flex items-center justify-center ">
             <img src={logo} alt="Logo"    />
           </div>
           
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Log in</h1>
-            <p className="text-gray-500">Welcome back! Please enter your details.</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl google-sans">Log in</h1>
+            <p className="text-gray-500 mb-1 text-sm">Welcome back! Please enter your details.</p>
           </div>
 
           {/* Toggle Tabs (Matches Signup layout) */}
