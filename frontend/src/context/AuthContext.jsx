@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { initSocket, disconnectSocket } from "../utils/socket";
+import api from "axios";
 
 const AuthContext = createContext();
 
@@ -17,16 +18,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  console.log("getinitialstate", getInitialState());
+
   const [user, setUser] = useState(getInitialState);
   const [profileImage, setProfileImage] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
+
   useEffect(() => {
-    
-    
-    
+
+
     if (user) {
       const s = initSocket(user._id);
       setSocket(s);

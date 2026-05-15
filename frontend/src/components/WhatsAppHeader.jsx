@@ -25,8 +25,6 @@ const WhatsAppHeader = ({ className }) => {
 
 
 
-
-
     // 2. Modified Upload Function (now accepts formData as an argument)
     const uploadImage = async (formData) => {
         try {
@@ -50,6 +48,7 @@ const WhatsAppHeader = ({ className }) => {
     };
 
 
+
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -66,6 +65,7 @@ const WhatsAppHeader = ({ className }) => {
     const navItems = [
         { id: 'chats', icon: <MdMarkUnreadChatAlt size={25} hasBadge={true} /> },
     ];
+
 
 
     const userProfileImage = profileImage || user?.profilePic;

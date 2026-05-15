@@ -9,7 +9,7 @@ export const uploadProfile = async (req, res) => {
     }
 
     // With CloudinaryStorage, the URL is in req.file.path or req.file.path
-    const imageUrl = req.file.path; 
+    const imageUrl = req.file.path; // path: 'https://res.cloudinary.com/dkufcnnvx/image/upload/v1778816999/assets/lxthkvf4v7f2d8njvjue.png
 
     // Update the user's profile picture in the database
     const updatedUser = await User.findByIdAndUpdate(

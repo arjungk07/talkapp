@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
-import toast from "react-hot-toast";
 
 export const useMessages = (selectedUser) => {
   const { socket, user } = useAuth();
@@ -25,7 +24,6 @@ export const useMessages = (selectedUser) => {
     }
     catch(err){
       console.log("Something Went wrong",data.message);
-      toast.error(err.response.data.message);
     }
      finally {
       setLoading(false);
