@@ -15,8 +15,9 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'talkapp-assets',
-    allowed_formats: ['jpg', 'png', 'jpeg'],
+    folder: 'assets',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    transformation: [{ width: 500, height: 500, crop: 'limit' }],
   },
 });
 
