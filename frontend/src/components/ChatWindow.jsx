@@ -82,10 +82,10 @@ const ChatWindow = ({ className }) => {
       console.error("Failed to delete messages:", error);
     }
 
-    
+
   };
 
-   const handleEmojiClick = async (messageId, emoji) => {
+  const handleEmojiClick = async (messageId, emoji) => {
 
     try {
       // Close the open picker panel
@@ -118,62 +118,62 @@ const ChatWindow = ({ className }) => {
     );
   }
 
+
   return (
-    <div className="flex-1 flex flex-col h-dvh w-full overflow-hidden bg-chat-bg">
+    <div className={`w-full h-dvh flex flex-col overflow-hidden bg-chat-bg`}>
 
-      {/* MAIN CHAT WINDOW */}
-      <div className="relative flex flex-1 flex-col overflow-hidden">
 
-        {/* HEADER */}
-        <div className="sticky top-0 z-50 shrink-0 bg-chat-bg">
-          <ChatHeader />
-        </div>
+      {/* HEADER */}
+      <div className="sticky top-0 z-50 shrink-0 bg-chat-bg">
+        <ChatHeader />
+      </div>
 
-        {/* MESSAGES */}
-        <main className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 pb-28 custom-scrollbar">
-          <TalkAppWallpaper />
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
-                <p className="mt-4 font-medium text-black">Loading Messages...</p>
-              </div>
+      {/* MESSAGES */}
+      <main className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 pb-28 custom-scrollbar">
+        <TalkAppWallpaper />
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
+              <p className="mt-4 font-medium text-black">Loading Messages...</p>
             </div>
-          ) : messages.length === 0 ? (
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="w-16 h-16 rounded-2xl bg-chat-panel border border-chat-border flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-chat-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <p className="text-chat-muted text-sm">No messages yet.</p>
-                <p className="text-chat-muted text-xs mt-1">Say hello to {selectedUser.name}! 👋</p>
-              </div>            </div>
-          ) : (
-            <>
-              {messages?.map((msg) => (
-                <MessageBubble
-                  key={msg._id}
-                  message={msg}
-                  onDelete={handleStartDeleteMode}
-                  onEmojiClick={handleEmojiClick}
-                />
-              ))}
+              <div className="w-16 h-16 rounded-2xl bg-chat-panel border border-chat-border flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-chat-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="text-chat-muted text-sm">No messages yet.</p>
+              <p className="text-chat-muted text-xs mt-1">Say hello to {selectedUser.name}! 👋</p>
+            </div>            </div>
+        ) : (
+          <>
+            {messages?.map((msg) => (
+              <MessageBubble
+                key={msg._id}
+                message={msg}
+                onDelete={handleStartDeleteMode}
+                onEmojiClick={handleEmojiClick}
+              />
+            ))}
 
-              {isTyping && <TypingIndicator />}
-            </>
-          )}
+            {isTyping && <TypingIndicator />}
+          </>
+        )}
 
-          <div ref={bottomRef} />
-        </main>
+        <div ref={bottomRef} />
+      </main>
 
-        {/* FOOTER */}
-        <footer className="absolute bottom-4 left-0 right-0 z-50 px-4 max-w-4xl mx-auto w-full">
-          
+      {/* FOOTER */}
+      <footer className="bg-white h-10 w-full">
+        <div className="absolute bottom-3 left-0 right-0 z-50 px-4 max-w-4xl mx-auto w-full">
+
           <form
             onSubmit={handleSend}
-            className="flex items-center gap-3 bg-chat-bg border border-chat-border rounded-3xl p-2 md:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-md"
+            className="flex items-center gap-3 bg-white border border-chat-border rounded-3xl p-2 md:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-md"
           >
             {!isSelectMode ? (
               <>
@@ -181,6 +181,7 @@ const ChatWindow = ({ className }) => {
                   <input
                     type="text"
                     autoComplete="off"
+                    data-1p-ignore="true"
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
@@ -251,10 +252,12 @@ const ChatWindow = ({ className }) => {
               </div>
             )}
           </form>
-        </footer>
+        </div>
+      </footer>
 
-      </div>
+
     </div>
+
   );
 };
 
