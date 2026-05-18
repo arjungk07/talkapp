@@ -165,7 +165,7 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
       )}
 
       {/* Popover Action Menu Bar */}
-      {isShowMode && isSent && isThisMessageSelected && (
+      {isShowMode && isThisMessageSelected && (
         <div className="absolute -top-10 z-99 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-4">
           <MessageActionsBar messageId={message._id} onDelete={onDelete} />
         </div>
