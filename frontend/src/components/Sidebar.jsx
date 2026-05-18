@@ -63,7 +63,7 @@ const Sidebar = ({ className }) => {
 
     } catch (err) {
       toast.error("Failed to load contacts");
-      console.error(err);
+      console.log(err.message);
     } finally {
       setLoading(false);
       setInitialLoading(false);
@@ -132,7 +132,7 @@ const Sidebar = ({ className }) => {
             placeholder="Search contacts..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-chat-panel border border-chat-border rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-chat-accent/50 transition-all"
+            className="w-full bg-chat-surface border border-chat-panel rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-chat-panel transition-all"
           />
         </div>
 
@@ -167,7 +167,7 @@ const Sidebar = ({ className }) => {
                   type="button"
                   key={u._id}
                   onClick={() => handleSelectUser(u)}
-                  className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-accent/20" : "hover:bg-chat-surface"
+                  className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
                     }`}
                 >
                   <div className="relative shrink-0">

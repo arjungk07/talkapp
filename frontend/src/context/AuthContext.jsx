@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { initSocket, disconnectSocket } from "../utils/socket";
-import api from "axios";
 
 const AuthContext = createContext();
 
@@ -18,7 +17,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  console.log("getinitialstate", getInitialState());
 
   const [user, setUser] = useState(getInitialState);
   const [profileImage, setProfileImage] = useState(null);

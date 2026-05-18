@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
 
-
-
-
 const messageSchema = new mongoose.Schema(
   {
     senderId: {
@@ -10,16 +7,27 @@ const messageSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    // Optional because AI chats may not have a second User object
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
     text: {
       type: String,
       required: [true, "Message text is required"],
       trim: true,
       maxlength: [2000, "Message cannot exceed 2000 characters"],
+    },
+    reactions: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        emoji: { type: String }
+      }
+    ],
+    role: {
+      type: String,
+      enum: ["user", "model"],
+      default: "user"
     },
     read: {
       type: Boolean,
@@ -33,7 +41,18 @@ const messageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for faster queries on conversations
+/** 
+ * INDEX 1: User-to-User Conversations
+ * Why: When fetching a chat between two people, you query BOTH sender and receiver.
+ * Sorting by createdAt: -1 ensures the "latest" messages are found first.
+ */
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
+
+/** 
+ * INDEX 2: AI Session History
+ * Why: For AI memory, we fetch messages by the 'chatId'.
+ * Sorting by createdAt: 1 ensures Gemini gets the history in chronological order.
+ */
+messageSchema.index({ chatId: 1, createdAt: 1 });
 
 export default mongoose.model("Message", messageSchema);

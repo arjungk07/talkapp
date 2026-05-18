@@ -18,14 +18,11 @@ export const useMessages = (selectedUser) => {
     setLoading(true);
     try {
       const { data } = await api.get(`/api/messages/${selectedUser._id}`);
-
       setMessages(data);
-      // {isAi: false, _id: '6a05704cb94e5a48e5fdc75f', senderId:'69f82fa236d9704e8ac2d087', receiverId: '6a03dabd4e6309736cf7f400', text: 'veruthute', …}    } catch (err) {
-    }
-    catch(err){
-      console.log("Something Went wrong",data.message);
-    }
-     finally {
+    } catch (err) {
+      // Safely access data error message if it exists
+      console.log("Something Went wrong", err.response?.data?.message || err.message);
+    } finally {
       setLoading(false);
     }
   }, [selectedUser]);
@@ -54,6 +51,27 @@ export const useMessages = (selectedUser) => {
     return () => socket.off("newMessage", handleNewMessage);
   }, [socket, selectedUser, user]);
 
+
+  // Listen for deletion updates from the server
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen for real-time deletion updates from the server
+    socket.on("messagesDeleted", ({ messageIds }) => {
+      console.log("Real-time delete event received for IDs:", messageIds);
+
+      // Remove the deleted messages from the UI state instantly
+      setMessages((prevMessages) =>
+        prevMessages.filter((msg) => !messageIds.includes(msg._id))
+      );
+    });
+
+    // Clean up the socket listener when the component unmounts or references change
+    return () => {
+      socket.off("messagesDeleted");
+    };
+  }, [socket, setMessages]);
+
   // Typing indicator listeners
   useEffect(() => {
     if (!socket || !selectedUser) return;
@@ -80,46 +98,109 @@ export const useMessages = (selectedUser) => {
     };
   }, [socket, selectedUser]);
 
+  // EMOJI REACTION REAL-TIME LISTENER
+  useEffect(() => {
+    if (!socket || !selectedUser) return;
+
+    const handleMessageReaction = ({ messageId, reactions }) => {
+      // Dynamically update the reactions array for the matching target message
+      setMessages((prev) =>
+        prev.map((msg) => (msg._id === messageId ? { ...msg, reactions } : msg))
+      );
+    };
+
+    socket.on("messageReaction", handleMessageReaction);
+    return () => {
+      socket.off("messageReaction", handleMessageReaction);
+    };
+  }, [socket, selectedUser]);
+
+  // Message send
   const sendMessage = async (text, isActive) => {
-  if (!text.trim() || !selectedUser || sending) return;
+    if (!text.trim() || !selectedUser || sending) return;
 
-  setSending(true);
-  try {
-    const { data } = await api.post("/api/messages", {
-      receiverId: selectedUser._id,
-      text: text.trim(),
-      isActive: isActive,
-    });
+    setSending(true);
+    try {
+      const { data } = await api.post("/api/messages", {
+        receiverId: selectedUser._id,
+        text: text.trim(),
+        isActive: isActive,
+      });
 
-    // 1. Log to verify: Should be an array [...]
-    console.log("Data from API:", data);
+      console.log("Data from API:", data);
 
-    // 2. Since backend always sends an array, spread it directly into state
-    // This works for [msg] (Normal) and [msg, aiReply] (AI Mode)
-    if (Array.isArray(data)) {
-      setMessages((prev) => [...prev, ...data]);
+      if (Array.isArray(data)) {
+        setMessages((prev) => [...prev, ...data]);
 
-      // 3. Prepare data for Socket Emit
-      const userMsg = data[0]; // The first object is always your message
-      const aiMsg = data.length > 1 ? data[1] : null; // Second object is AI (if exists)
+        const userMsg = data[0];
+        const aiMsg = data.length > 1 ? data[1] : null;
 
-      // 4. Real-time Socket Emit
-      if (userMsg && userMsg._id) {
-        socket?.emit("sendMessage", {
-          message: userMsg,
-          receiverId: selectedUser._id,
-          aiReply: aiMsg, // Will be null if isAi is false
-        });
+        if (userMsg && userMsg._id) {
+          socket?.emit("sendMessage", {
+            message: userMsg,
+            receiverId: selectedUser._id,
+            aiReply: aiMsg,
+          });
+        }
       }
+    } catch (err) {
+      console.error("Send error:", err.message);
+    } finally {
+      setSending(false);
     }
+  };
 
-  } catch (err) {
-    console.error("Send error:", err);
-    toast.error("Failed to send message");
-  } finally {
-    setSending(false);
-  }
-};
+  // EMOJI REACTION FUNCTIONS 
+  const sendReaction = async (messageId, emoji) => {
+    if (!socket || !selectedUser || !messageId) return;
+
+    try {
+      // 1. Post to HTTP backend to persist reaction in MongoDB
+      const { data } = await api.post(`/api/messages/${messageId}/react`, { emoji });
+
+      // Expected backend response syntax: { messageId, reactions: [...] }
+      // 2. Emit via socket to notify the other user instantly
+      socket.emit("sendReaction", {
+        messageId: messageId,
+        receiverId: selectedUser._id,
+        reactions: data.reactions,
+      });
+
+      // 3. Optimistically/locally update state
+      setMessages((prev) =>
+        prev.map((msg) => (msg._id === messageId ? { ...msg, reactions: data.reactions } : msg))
+      );
+      console.log(messages);
+    } catch (err) {
+      console.error("Failed to add reaction:", err.message);
+    }
+  };
+
+
+  const deleteMessages = async (selectedMessageIds) => {
+    if (!socket || !selectedUser || !selectedMessageIds || !Array.isArray(selectedMessageIds) || selectedMessageIds.length === 0) return;
+
+    try {
+      console.log("Selected Message IDs to delete:", selectedMessageIds);
+
+      // Pass the array inside the data config option for DELETE requests
+      await api.delete('/api/messages/deletemessages', { data: { messageIds: selectedMessageIds } });
+      console.log("Messages deleted successfully from backend");
+
+      // Remove messages from local state (UI)
+      setMessages((prev) => prev.filter((msg) => !selectedMessageIds.includes(msg._id)));
+
+      // Emit socket event so the other user also removes them immediately
+      socket.emit("deleteMessages", {
+        messageIds: selectedMessageIds,
+        receiverId: selectedUser._id,
+      });
+
+      console.log("Delete event emitted via socket");
+    } catch (err) {
+      console.error("Error deleting messages:", err.response?.data?.message || err.message);
+    }
+  };
 
   const emitTyping = () => {
     socket?.emit("typing", {
@@ -135,5 +216,16 @@ export const useMessages = (selectedUser) => {
     });
   };
 
-  return { messages, loading, sending, isTyping, sendMessage, emitTyping, emitStopTyping };
+  return {
+    messages,
+    loading,
+    sending,
+    isTyping,
+    setMessages,
+    sendMessage,
+    sendReaction, // Added to return properties
+    emitTyping,
+    emitStopTyping,
+    deleteMessages
+  };
 };

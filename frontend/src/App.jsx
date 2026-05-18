@@ -3,6 +3,7 @@ import React from "react";
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { MessagesProvider } from "./context/MessagesContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -48,6 +49,7 @@ function App() {
     // but you can keep it if your links include /talkapp/
     <Router>
       <AuthProvider>
+        <MessagesProvider>
         <AppRoutes />
         <Toaster
           position="top-center"
@@ -68,6 +70,7 @@ function App() {
             },
           }}
         />
+        </MessagesProvider>
       </AuthProvider>
     </Router>
   );

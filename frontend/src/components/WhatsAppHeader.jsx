@@ -137,7 +137,7 @@ const WhatsAppHeader = ({ className }) => {
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
                             className={`relative w-12 h-12 rounded-full transition-all cursor-pointer flex justify-center items-center
-            ${activeTab === item.id ? 'bg-chat-iconHover/15 text-black' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}`}
+            ${activeTab === item.id ? 'bg-chat-accent/5 text-black' : 'text-zinc-400 hover:bg-chat-accent/5 hover:text-black'}`}
                         >
                             {item.icon}
                             {item.hasBadge && (
@@ -153,7 +153,7 @@ const WhatsAppHeader = ({ className }) => {
                     <input type="file" ref={galleryRef} className="hidden" accept="image/*" />
                     <button
                         onClick={() => galleryRef.current.click()}
-                        className="text-zinc-400 rounded-full hover:bg-chat-iconHover/15 hover:text-black/70 cursor-pointer p-4 transition-colors"
+                        className="text-zinc-400 rounded-full hover:bg-chat-accent/5 hover:text-black cursor-pointer p-4 transition-colors"
                     >
                         <GrGallery size={22} />
                     </button>
@@ -168,7 +168,7 @@ const WhatsAppHeader = ({ className }) => {
                         />
                         <div
                             onClick={() => profileRef.current.click()}
-                            className="group relative cursor-pointer w-12 h-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center border-2 border-zinc-700 hover:border-yellow-400 transition-all"
+                            className="group relative cursor-pointer w-12 h-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center border-2 hover:border-yellow-400 transition-all"
                         >
                             {userProfileImage ? (
                                 <img src={userProfileImage} alt="profile" className="w-full h-full object-cover" />

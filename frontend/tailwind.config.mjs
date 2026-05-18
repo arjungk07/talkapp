@@ -5,13 +5,11 @@ export default {
     extend: {
       colors: {
         chat: {
-          bg: "white",
-          iconHover: "#ffb938",
-          sidebar: "white",
-          panel: "#F7F5F3",
-          surface: "#f5f5f7",       // Light gray for subtle contrast against white
-          border: "#e5e5e5",        // Softened from black to a light gray for a modern look
-          accent: "#ffb938",        // Keeping your signature purple
+          white: "white",
+          panel: "#FEF2FE",         // soft pink
+          surface: "#f5f5f7",       // Light gray 
+          border: "#e5e5e5",        // light gray
+          accent: "#112A46",        // Keeping your signature purple
           "accent-light": "#9d8ff",
           "accent-dim": "#7c6af715",
           sent: "#7c6af7",          // White text will pop well on this

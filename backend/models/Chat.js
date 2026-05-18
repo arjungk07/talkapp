@@ -1,33 +1,29 @@
 import mongoose from "mongoose";
 
-// This represents a single exchange in the AI's memory
 const historySchema = new mongoose.Schema({
-  role: { 
-    type: String, 
-    enum: ["user", "model"], // Gemini uses "model" instead of "ai" or "bot"
-    required: true 
-  },
-  content: { 
-    type: String, 
-    required: true 
-  },
-  timestamp: { 
-    type: Date, 
-    default: Date.now 
-  }
+  role: { type: String, enum: ["user", "model"], required: true },
+  content: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now }
 });
 
 const chatSchema = new mongoose.Schema({
-  // The person who is talking to the AI
-  userId: { 
+  // The User (Person sending the message)
+  senderId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "User", 
-    required: true,
-    unique: true // One history document per user
+    required: true
   },
-  // The array of previous messages Gemini will read
+  // The AI/Bot (The target receiver)
+  receiverId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: "User", 
+    required: true
+  },
   messages: [historySchema]
 }, { timestamps: true });
+
+// CRITICAL: This ensures one unique history document per user-receiver pair
+chatSchema.index({ senderId: 1, receiverId: 1 }, { unique: true });
 
 const Chat = mongoose.model("Chat", chatSchema);
 export default Chat;

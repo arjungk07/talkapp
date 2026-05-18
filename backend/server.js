@@ -7,7 +7,6 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import session from "express-session";
-import passport from 'passport';
 import connectDB from "./config/db.js";
 import { initSocket } from "./socket/socketHandler.js";
 import uploadRoutes from "./routes/Sidebar/uploadRoutes.js";
@@ -27,7 +26,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "DELETE"],
     credentials: true,
   },
 });
@@ -63,6 +62,7 @@ app.use(
     },
   })
 );
+
 
 
 app.use("/uploads", express.static("uploads"));//server uploaded images
