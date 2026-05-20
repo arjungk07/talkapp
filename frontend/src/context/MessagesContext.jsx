@@ -7,8 +7,11 @@ export const MessagesProvider = ({ children }) => {
     const [isShowMode, setIsShowMode] = useState(false);
     const [showPicker, setShowPicker] = useState(null);
     const [isSelectMode, setIsSelectMode] = useState(false);
-    const [selectedMessageIds, setSelectedMessageIds] = useState([]);
+    const [selectedMessageIds, setSelectedMessageIds] = useState([]); //['6a0d66f3cbe8efb3edcb28cd', '6a0d5465cbe8efb3edcb27a1']
+    console.log(selectedMessageIds);
     const [isActive, setIsActive] = useState(false);
+
+
 
 
     const value = {

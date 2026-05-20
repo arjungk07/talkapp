@@ -5,12 +5,14 @@ import { useAuth } from "../context/AuthContext";
 import { useMessagesContext } from "../context/MessagesContext";
 import EmojiPicker from "emoji-picker-react";
 
-const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
+const MessageBubble = ({ message, onEmojiClick }) => {
+
   const { user } = useAuth();
   const {
     isShowMode, //trigger message action bar like delete, forward, reaction 
     setIsShowMode,
     isSelectMode, // show multiple checkoxes to select multiple messages
+    setIsSelectMode,
     selectedMessageIds, //ids of selected messages
     setSelectedMessageIds,
     showPicker,
@@ -23,7 +25,9 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
   }
 
   const bubbleRef = useRef(null);
+  const actionBarRef = useRef(null); // add this ref
   const isSent = message.senderId === user._id;
+
 
 
   // Standardize selected item tracking safely as arrays
@@ -38,22 +42,19 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
     if (!isShowMode || !isThisMessageSelected) return;
 
     const handleClickOutside = (event) => {
-      if (bubbleRef.current && !bubbleRef.current.contains(event.target)) {
-        setIsShowMode(false);
+      const insideBubble = bubbleRef.current?.contains(event.target);
+      const insideActionBar = actionBarRef.current?.contains(event.target); // ← add
 
-        if (Array.isArray(selectedMessageIds)) {
-          setSelectedMessageIds([]);
-        } else {
-          setSelectedMessageIds(null);
-        }
+      if (!insideBubble && !insideActionBar) { // ← check both
+        setIsShowMode(false);
+        setSelectedMessageIds([]);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isShowMode, isThisMessageSelected, selectedMessageIds, setIsShowMode, setSelectedMessageIds, showPicker, setShowPicker]);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isShowMode, isThisMessageSelected, selectedMessageIds]);
+
 
   useEffect(() => {
     if (!showPicker) return;
@@ -72,35 +73,49 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
 
   let pressTimer;
 
-  // --- SELECTION / ACTION LOGIC ---
-  const triggerDelete = () => {
-    if (!isSent) return;
+  const handledelete = () => {
 
-    setIsShowMode(true);
+    setIsSelectMode(true);
+    setIsShowMode(false);
 
-    if (typeof setSelectedMessageIds === "function") {
-      if (Array.isArray(selectedMessageIds)) {
-        if (!selectedMessageIds.includes(message._id)) {
-          setSelectedMessageIds([...selectedMessageIds, message._id]);
-        }
-      } else {
-        setSelectedMessageIds(message._id);
-      }
-    }
   };
 
+  // --- SELECTION / ACTION LOGIC ---
+  const triggerDelete = () => {
+
+
+    if (typeof setSelectedMessageIds === "function" && Array.isArray(selectedMessageIds)) {
+      // If it's already selected, remove it (toggle behavior). Otherwise, add it.
+      if (selectedMessageIds.includes(message._id)) {
+        setSelectedMessageIds(selectedMessageIds.filter(id => id !== message._id));
+      } else {
+        setSelectedMessageIds([...selectedMessageIds, message._id]);
+      }
+    }
+
+  };
+
+
+
+  // 2. Long Press handlers (Mobile)
   const handlePressStart = () => {
-    pressTimer = setTimeout(triggerDelete, 600);
+    if (!isSent) return;
+
+    pressTimer = setTimeout(() => {
+      setIsSelectMode(true); // First, enter selection mode
+      triggerDelete();     // Directly select the item
+    }, 600);
   };
 
   const handlePressEnd = () => {
     clearTimeout(pressTimer);
   };
 
+  // 3. Right-Click handler (Desktop)
   const handleContextMenu = (e) => {
-    if (!isSent) return;
     e.preventDefault();
-    triggerDelete();
+    setIsShowMode(true); // First, enter selection mode
+    triggerDelete();     // Directly select the item
   };
 
   const handleToggleSelectMessage = (messageId) => {
@@ -137,18 +152,15 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
 
 
 
-
-
-
   return (
     <div
       ref={bubbleRef}
       onClick={handleRowClick}
       className={`
-        flex  mb-3 px-2 relative group select-none cursor-pointer transition-all duration-200 gap-3 items-center
+        flex  mb-3 px-2 relative group transition-all duration-200 gap-3 items-center
         ${isSent ? "justify-end " : "justify-start"} 
         ${showPicker === message._id ? `flex-col-reverse ${isSent ? "items-end" : "items-start"} xl:flex-row xl:items-center` : ""}
-        ${isSelectMode ? "justify-between! p-2 rounded-xl bg-gray-50/50 hover:bg-green-50/60 cursor-pointer active:scale-[0.99]" : ""}
+        ${isSelectMode ? `p-2 rounded-xl ${isSent ? "justify-between!" : ""}  bg-gray-50/50 hover:bg-green-50/60 active:scale-[0.99]` : ""}
         ${isSelectMode && isSelected ? "bg-green-100/50 hover:bg-green-100/70" : ""}
       `}
     >
@@ -158,46 +170,49 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
           type="checkbox"
           id={`select-${message._id}`}
           checked={isSelected}
-          onChange={() => handleToggleSelectMessage(message._id)}
-          onClick={(e) => e.stopPropagation()} // Stop bubbling event double triggers
+          onChange={(e) => { e.stopPropagation(); handleToggleSelectMessage(message._id) }}
           className="w-4 h-4 rounded text-green-600 focus:ring-green-500 cursor-pointer accent-green-600 transition-all duration-300 scale-110 animate-bubble-pop shrink-0"
         />
       )}
 
       {/* Popover Action Menu Bar */}
       {isShowMode && isThisMessageSelected && (
-        <div className="absolute -top-10 z-99 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-4">
-          <MessageActionsBar messageId={message._id} onDelete={onDelete} />
+        <div ref={actionBarRef} className={`absolute -top-10 z-99 ${isSent ? "left-auto right-0 " : "left-1/2 -translate-x-1/2"} `}>
+          <MessageActionsBar messageId={message._id} handledelete={handledelete} />
         </div>
       )}
 
 
 
       {/* hover emoji icon */}
-      <div className={` ${isSent ? "justify-end" : "order-1"} ${message.reactions?.length > 0 ? "mb-5" : ""} flex flex-1 items-center group opacity-0 group-hover:opacity-100  pointer-events-auto transition-opacity duration-150 ease-in-out z-10`}>
-        <div className="flex items-center justify-center p-1 bg-white border border-gray-100 rounded-full shadow-md">
+      {
+        !isSelectMode && (
+          <div className={` ${isSent ? "justify-end" : "order-1"} ${message.reactions?.length > 0 ? "mb-5" : ""} group  hidden md:group-hover:flex items-center  pointer-events-auto transition-opacity duration-150 ease-in-out z-10`}>
+            <div className="flex items-center justify-center p-1 bg-white border border-gray-100 rounded-full shadow-md">
 
-          <div
-            ref={bubbleRef}
-            role="button"
-            onClick={(e) => {
-              setShowPicker(showPicker === message._id ? null : message._id)
-            }}
-            class="flex items-center justify-center p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all duration-150 ease-in-out cursor-pointer outline-none select-none shrink-0"
-          >
-            <button >
-              <span aria-hidden="true" class="w-5 h-5 flex items-center justify-center pointer-events-none">
-                <svg viewBox="0 0 24 24" class="w-full h-full fill-current" preserveAspectRatio="xMidYMid meet">
-                  <title>ic-mood</title>
-                  <path d="M15.5 11C15.9167 11 16.2708 10.8542 16.5625 10.5625C16.8542 10.2708 17 9.91667 17 9.5C17 9.08333 16.8542 8.72917 16.5625 8.4375C16.2708 8.14583 15.9167 8 15.5 8C15.0833 8 14.7292 8.14583 14.4375 8.4375C14.1458 8.72917 14 9.08333 14 9.5C14 9.91667 14.1458 10.2708 14.4375 10.5625C14.7292 10.8542 15.0833 11 15.5 11ZM8.5 11C8.91667 11 9.27083 10.8542 9.5625 10.5625C9.85417 10.2708 10 9.91667 10 9.5C10 9.08333 9.85417 8.72917 9.5625 8.4375C9.27083 8.14583 8.91667 8 8.5 8C8.08333 8 7.72917 8.14583 7.4375 8.4375C7.14583 8.72917 7 9.08333 7 9.5C7 9.91667 7.14583 10.2708 7.4375 10.5625C7.72917 10.8542 8.08333 11 8.5 11ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22ZM12 20C14.2333 20 16.125 19.225 17.675 17.675C19.225 16.125 20 14.2333 20 12C20 9.76667 19.225 7.875 17.675 6.325C16.125 4.775 14.2333 4 12 4C9.76667 4 7.875 4.775 6.325 6.325C4.775 7.875 4 9.76667 4 12C4 14.2333 4.775 16.125 6.325 17.675C7.875 19.225 9.76667 20 12 20ZM12 17.5C12.9667 17.5 13.8583 17.2667 14.675 16.8C15.4917 16.3333 16.15 15.7 16.65 14.9C16.75 14.7 16.7417 14.5 16.625 14.3C16.5083 14.1 16.3333 14 16.1 14H7.9C7.66667 14 7.49167 14.1 7.375 14.3C7.25833 14.5 7.25 14.7 7.35 14.9C7.85 15.7 8.5125 16.3333 9.3375 16.8C10.1625 17.2667 11.05 17.5 12 17.5Z"></path>
-                </svg>
-              </span>
-            </button>
+              <div
+                ref={bubbleRef}
+                role="button"
+                onClick={(e) => {
+                  setShowPicker(showPicker === message._id ? null : message._id)
+                }}
+                class="flex items-center justify-center p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all duration-150 ease-in-out cursor-pointer outline-none select-none shrink-0"
+              >
+                <button >
+                  <span aria-hidden="true" class="w-5 h-5 flex items-center justify-center pointer-events-none">
+                    <svg viewBox="0 0 24 24" class="w-full h-full fill-current" preserveAspectRatio="xMidYMid meet">
+                      <title>ic-mood</title>
+                      <path d="M15.5 11C15.9167 11 16.2708 10.8542 16.5625 10.5625C16.8542 10.2708 17 9.91667 17 9.5C17 9.08333 16.8542 8.72917 16.5625 8.4375C16.2708 8.14583 15.9167 8 15.5 8C15.0833 8 14.7292 8.14583 14.4375 8.4375C14.1458 8.72917 14 9.08333 14 9.5C14 9.91667 14.1458 10.2708 14.4375 10.5625C14.7292 10.8542 15.0833 11 15.5 11ZM8.5 11C8.91667 11 9.27083 10.8542 9.5625 10.5625C9.85417 10.2708 10 9.91667 10 9.5C10 9.08333 9.85417 8.72917 9.5625 8.4375C9.27083 8.14583 8.91667 8 8.5 8C8.08333 8 7.72917 8.14583 7.4375 8.4375C7.14583 8.72917 7 9.08333 7 9.5C7 9.91667 7.14583 10.2708 7.4375 10.5625C7.72917 10.8542 8.08333 11 8.5 11ZM12 22C10.6167 22 9.31667 21.7375 8.1 21.2125C6.88333 20.6875 5.825 19.975 4.925 19.075C4.025 18.175 3.3125 17.1167 2.7875 15.9C2.2625 14.6833 2 13.3833 2 12C2 10.6167 2.2625 9.31667 2.7875 8.1C3.3125 6.88333 4.025 5.825 4.925 4.925C5.825 4.025 6.88333 3.3125 8.1 2.7875C9.31667 2.2625 10.6167 2 12 2C13.3833 2 14.6833 2.2625 15.9 2.7875C17.1167 3.3125 18.175 4.025 19.075 4.925C19.975 5.825 20.6875 6.88333 21.2125 8.1C21.7375 9.31667 22 10.6167 22 12C22 13.3833 21.7375 14.6833 21.2125 15.9C20.6875 17.1167 19.975 18.175 19.075 19.075C18.175 19.975 17.1167 20.6875 15.9 21.2125C14.6833 21.7375 13.3833 22 12 22ZM12 20C14.2333 20 16.125 19.225 17.675 17.675C19.225 16.125 20 14.2333 20 12C20 9.76667 19.225 7.875 17.675 6.325C16.125 4.775 14.2333 4 12 4C9.76667 4 7.875 4.775 6.325 6.325C4.775 7.875 4 9.76667 4 12C4 14.2333 4.775 16.125 6.325 17.675C7.875 19.225 9.76667 20 12 20ZM12 17.5C12.9667 17.5 13.8583 17.2667 14.675 16.8C15.4917 16.3333 16.15 15.7 16.65 14.9C16.75 14.7 16.7417 14.5 16.625 14.3C16.5083 14.1 16.3333 14 16.1 14H7.9C7.66667 14 7.49167 14.1 7.375 14.3C7.25833 14.5 7.25 14.7 7.35 14.9C7.85 15.7 8.5125 16.3333 9.3375 16.8C10.1625 17.2667 11.05 17.5 12 17.5Z"></path>
+                    </svg>
+                  </span>
+                </button>
 
+              </div>
+
+            </div>
           </div>
-
-        </div>
-      </div>
+        )
+      }
 
 
       <div
@@ -210,8 +225,9 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
         className={`
     
     animate-bubble-pop
-    md:max-w-[50%]
+    max-w-[90%] sm:max-w-[75%] md:max-w-[50%]
     flex flex-col gap-1
+    cursor-pointer
     ${isSent ? "items-end" : "items-start"}
     ${isSent && showPicker ? "order-2" : ""}
     ${isThisMessageSelected ? "opacity-90 scale-[0.99] transition-all" : ""}
@@ -223,16 +239,17 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
       relative overflow-hidden
       px-5 py-2 flex flex-col 
       text-[15px] font-medium
-      rounded-[22px]
+      rounded-[18px]
       transition-all duration-300
       ${isSent
-              ? `bg-[linear-gradient(135deg,#C5E8FF_15%,#E8F7FF_100%)] text-[#1A1A1A] rounded-[6px]`
-              : `bg-chat-muted/15 text-[#2B2B2B] rounded-bl-[6px]`
+              ? `bg-[linear-gradient(135deg,#C5E8FF_15%,#E8F7FF_100%)] text-[#1A1A1A] `
+              : `bg-chat-muted/15 text-[#2B2B2B]`
             }
     `}
         >
+          
           {/* Text String Display */}
-          <p className={`text-sm leading-relaxed wrap-break-word whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
+          <p className={`text-sm leading-relaxed wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
             {message.text}
           </p>
 
@@ -270,6 +287,7 @@ const MessageBubble = ({ message, onEmojiClick, onDelete }) => {
         )}
 
       </div>
+
 
 
 

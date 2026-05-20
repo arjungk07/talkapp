@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, use } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Flag, Trash2, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useMessages } from "../hooks/useMessages";
 import ChatHeader from "./ChatHeader";
@@ -14,21 +16,82 @@ const ChatWindow = ({ className }) => {
     setIsSelectMode,
     selectedMessageIds,
     setSelectedMessageIds,
+    isShowMode,
     setIsShowMode,
     isActive,
     setShowPicker,
   } = useMessagesContext();
 
-  const { messages, loading, sending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
+  const {
+    messages,
+    loading,
+    sending,
+    isTyping,
+    sendMessage,
+    deleteMessages,
+    sendReaction,
+    emitTyping,
+    emitStopTyping,
+  } = useMessages(selectedUser);
+
+  const [DeleteModel, setDeleteModel] = useState(false);
   const [text, setText] = useState("");
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const footerRef = useRef(null);
 
-  // Auto scroll to bottom
+  // ── Mobile keyboard fix ────────────────────────────────────────────────
+  // Problem: on mobile, when the soft keyboard opens the browser shrinks the
+  // viewport height and re-layouts the whole page — pushing header + messages
+  // upward together with the footer.
+  //
+  // Fix: we do NOT use fixed/absolute on the outer container (that would break
+  // the parent flex layout of sidebar + ChatWindow). Instead:
+  //   1. The outer wrapper stays in normal flex flow (h-full).
+  //   2. We watch visualViewport for keyboard open/close.
+  //   3. We apply a CSS translateY ONLY to the footer element, sliding it up
+  //      above the keyboard. Header and messages never move.
+  //
+  // This is the same approach used by WhatsApp Web / ChatGPT mobile.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onViewportChange = () => {
+      if (!footerRef.current) return;
+
+      // keyboard height = full layout height minus visible viewport height
+      // minus any scrolled-out offset at the top
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - vv.height - (vv.offsetTop ?? 0)
+      );
+
+      // Slide ONLY the footer up by exactly the keyboard height
+      footerRef.current.style.transform = `translateY(-${keyboardHeight}px)`;
+
+      // Scroll messages to bottom so the latest message stays visible
+      if (keyboardHeight > 0) {
+        setTimeout(
+          () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+          60
+        );
+      }
+    };
+
+    vv.addEventListener("resize", onViewportChange);
+    vv.addEventListener("scroll", onViewportChange);
+    return () => {
+      vv.removeEventListener("resize", onViewportChange);
+      vv.removeEventListener("scroll", onViewportChange);
+    };
+  }, []);
+  // ──────────────────────────────────────────────────────────────────────
+
+  // Auto scroll to bottom on new messages / typing indicator
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
-
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -39,12 +102,15 @@ const ChatWindow = ({ className }) => {
     setText("");
   };
 
-  const handleTyping = useCallback((e) => {
-    setText(e.target.value);
-    emitTyping();
-    clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => emitStopTyping(), 2000);
-  }, [emitTyping, emitStopTyping]);
+  const handleTyping = useCallback(
+    (e) => {
+      setText(e.target.value);
+      emitTyping();
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => emitStopTyping(), 2000);
+    },
+    [emitTyping, emitStopTyping]
+  );
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -53,56 +119,41 @@ const ChatWindow = ({ className }) => {
     }
   };
 
-  // --- DELETE & SELECTION LOGIC ---
-
-  // Enter select mode and automatically check the message where "Delete" was clicked
-  const handleStartDeleteMode = (messageId) => {
-    setIsSelectMode(true);
-    setSelectedMessageIds([messageId]);
-  };
-
-
-
   const handleCancelSelectMode = () => {
     setIsSelectMode(false);
+    setIsShowMode(false);
     setSelectedMessageIds([]);
-    console.log("Select mode cancelled");
   };
 
   const handleDeleteSelected = async () => {
-    console.log("Selected Message IDs", selectedMessageIds);
     setIsSelectMode(false);
-
     try {
       await deleteMessages(selectedMessageIds);
-      console.log("Messages deleted successfully");
+      setDeleteModel(false);
       setSelectedMessageIds([]);
       if (typeof setIsShowMode === "function") setIsShowMode(false);
     } catch (error) {
       console.error("Failed to delete messages:", error);
     }
-
-
+    finally
+    {
+      setDeleteModel(false);
+    }
   };
 
   const handleEmojiClick = async (messageId, emoji) => {
-
     try {
-      // Close the open picker panel
       setShowPicker(null);
       await sendReaction(messageId, emoji.emoji);
-
-
     } catch (error) {
       console.log(error);
     }
-  }
-
+  };
 
   // No user selected — only visible on desktop (parent hides this on mobile)
   if (!selectedUser) {
     return (
-      <div className={`${className} flex-1 flex items-center h-screen justify-center bg-chat-panel`}>
+      <div className={`${className} flex-1 flex items-center justify-center bg-chat-panel`}>
         <div className="text-center">
           <div className="w-24 h-24 rounded-3xl bg-chat-panel border border-chat-border flex items-center justify-center mx-auto mb-6 shadow-2xl">
             <svg className="w-12 h-12 text-chat-accent opacity-60" fill="currentColor" viewBox="0 0 24 24">
@@ -119,58 +170,215 @@ const ChatWindow = ({ className }) => {
   }
 
 
+
+
+  function DeleteMessagePopup({ open, onClose, onDelete }) {
+    return (
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Modal */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 40 }}
+              transition={{
+                type: "spring",
+                stiffness: 260,
+                damping: 20,
+              }}
+              className="relative w-full max-w-sm overflow-hidden rounded-4xl bg-white shadow-[0_20px_80px_rgba(0,0,0,0.18)]"
+            >
+              {/* Floating Glow */}
+              <div className="absolute -top-16 -right-10 h-40 w-40 rounded-full bg-red-100 blur-3xl" />
+
+              {/* Close Button */}
+              <motion.button
+                whileHover={{
+                  rotate: 90,
+                  scale: 1.08,
+                }}
+                whileTap={{
+                  scale: 0.92,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 300,
+                }}
+                onClick={onClose}
+                className="absolute top-4 right-4 z-50 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-zinc-500 shadow-s transition-colors duration-20 hover:bg-zinc-200 active:bg-zinc-300focus:outline-none"
+              >
+                <X size={18} strokeWidth={2.5} />
+              </motion.button>
+
+              {/* Content */}
+              <div className="relative z-10 px-7 pb-7 pt-10">
+                {/* Animated Icon */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{
+                    delay: 0.15,
+                    type: "spring",
+                    stiffness: 300,
+                  }}
+                  className="mx-auto flex h-15 w-15 items-center justify-center"
+                >
+                  <motion.div
+                    animate={{
+                      rotate: [0, -10, 10, -5, 0],
+                    }}
+                    transition={{
+                      duration: 0.6,
+                      delay: 0.3,
+                    }}
+                  >
+                    <Trash2 className="h-7 w-7 text-red-500" />
+                  </motion.div>
+                </motion.div>
+
+                {/* Text */}
+                <div className="mt-6 text-center">
+                  <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
+                    Delete message?
+                  </h2>
+
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+                    This message will be permanently removed from your
+                    conversation history.
+                  </p>
+                </div>
+
+                {/* Buttons */}
+                <div className="mt-8 flex gap-3">
+                  {/* Cancel */}
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={onClose}
+                    className="flex-1 cursor-pointer rounded-full border border-zinc-200 bg-zinc-100 py-3 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-200"
+                  >
+                    Cancel
+                  </motion.button>
+
+                  {/* Delete */}
+                  <motion.button
+                    whileHover={{
+                      scale: 1.03,
+                      boxShadow: "0px 10px 25px rgba(239,68,68,0.35)",
+                    }}
+                    whileTap={{ scale: 0.94 }}
+                    onClick={onDelete}
+                    className="relative cursor-pointer flex-1 overflow-hidden rounded-full bg-linear-to-r from-red-500 to-rose-500 py-3 text-sm font-semibold text-white"
+                  >
+                    {/* Shine Animation */}
+                    <motion.span
+                      initial={{ x: "-120%" }}
+                      animate={{ x: "220%" }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 2.2,
+                        ease: "linear",
+                      }}
+                      className="absolute inset-0 w-1/3 skew-x-12 bg-white/30 blur-md"
+                    />
+
+                    <span className="relative z-10">Delete</span>
+                  </motion.button>
+
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+
   return (
-    <div className={`w-full h-dvh flex flex-col overflow-hidden bg-chat-bg`}>
+    /*
+      LAYOUT STRATEGY
+      ───────────────
+      • Outer div stays in normal flex flow — h-full fills the slot given by
+        the parent (Home page sidebar+chat layout). NO fixed/absolute here.
+      • overflow-hidden on wrapper clips anything that might bleed out.
+      • Header   → shrink-0           always visible, never pushed
+      • Messages → flex-1 + min-h-0   min-h-0 is critical: prevents a flex
+                                       overflow bug on iOS that breaks scrolling
+      • Footer   → shrink-0           natural height, slides via translateY only
+    */
+    <div className={`${className} w-full h-full flex flex-col overflow-hidden bg-chat-bg`}>
 
-
-      {/* HEADER */}
-      <div className="sticky top-0 z-50 shrink-0 bg-chat-bg">
+      {/* HEADER — locked to top, never moves */}
+      <div className="shrink-0 z-50 bg-chat-bg">
         <ChatHeader />
       </div>
 
-      {/* MESSAGES */}
-      <main className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 pb-28 custom-scrollbar">
-        <TalkAppWallpaper />
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
-              <p className="mt-4 font-medium text-black">Loading Messages...</p>
+      {/* MESSAGES — scrollable, fills all available space */}
+
+
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div className="w-full px-4 lg:px-6 py-4 pb-6">
+          <TalkAppWallpaper />
+
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
+                <p className="mt-4 font-medium text-black">Loading Messages...</p>
+              </div>
             </div>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="flex flex-col items-center justify-center h-full text-center">
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
               <div className="w-16 h-16 rounded-2xl bg-chat-panel border border-chat-border flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-chat-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
                 </svg>
               </div>
               <p className="text-chat-muted text-sm">No messages yet.</p>
               <p className="text-chat-muted text-xs mt-1">Say hello to {selectedUser.name}! 👋</p>
-            </div>            </div>
-        ) : (
-          <>
-            {messages?.map((msg) => (
-              <MessageBubble
-                key={msg._id}
-                message={msg}
-                onDelete={handleStartDeleteMode}
-                onEmojiClick={handleEmojiClick}
-              />
-            ))}
+            </div>
+          ) : (
+            <>
+              {messages?.map((msg) => (
+                <MessageBubble
+                  key={msg._id}
+                  message={msg}
+                  onEmojiClick={handleEmojiClick}
+                />
+              ))}
+              {isTyping && <TypingIndicator />}
+            </>
+          )}
 
-            {isTyping && <TypingIndicator />}
-          </>
-        )}
-
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </div>
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-white h-10 w-full">
-        <div className="absolute bottom-3 left-0 right-0 z-50 px-4 max-w-4xl mx-auto w-full">
-
+      {/* FOOTER
+          ──────
+          shrink-0 → never compresses.
+          translateY via visualViewport JS → ONLY this element slides up when
+          the keyboard opens. Header and messages stay completely still.
+          transition → smooth animation when keyboard appears / disappears.
+          willChange: transform → hints GPU compositing for smooth slide. */}
+      <footer
+        ref={footerRef}
+        className="shrink-0 z-50 bg-chat-bg px-4 py-3"
+        style={{
+          transition: "transform 0.15s ease-out",
+          willChange: "transform",
+        }}
+      >
+        <div className="max-w-4xl mx-auto w-full">
           <form
             onSubmit={handleSend}
             className="flex items-center gap-3 bg-white border border-chat-border rounded-3xl p-2 md:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-md"
@@ -180,14 +388,18 @@ const ChatWindow = ({ className }) => {
                 <div className="flex-1 relative">
                   <input
                     type="text"
+                    /* disable ALL browser autocomplete / fill suggestions */
                     autoComplete="off"
-                    data-1p-ignore="true"
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
+                    name="chat-msg-no-ac"
+                    data-form-type="other"
+                    data-lpignore="true"
+                    data-1p-ignore
+                    /* ──────────────────────────────────────────────────── */
                     enterKeyHint="send"
                     inputMode="text"
-                    data-form-type="other"
                     value={text}
                     onChange={handleTyping}
                     onKeyDown={handleKeyDown}
@@ -201,6 +413,7 @@ const ChatWindow = ({ className }) => {
                     </span>
                   )}
                 </div>
+
                 <button
                   type="submit"
                   disabled={!text.trim() || sending}
@@ -223,25 +436,25 @@ const ChatWindow = ({ className }) => {
                 <button
                   type="button"
                   onClick={handleCancelSelectMode}
-                  className="text-sm font-medium text-gray-500  hover:text-gray-800 cursor-pointer transition-colors"
+                  className="text-sm font-medium text-gray-500 hover:text-gray-800 cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
 
                 <div className="flex-1 flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-700">
-                    {selectedMessageIds.length} {selectedMessageIds.length === 1 ? 'message' : 'messages'} selected
+                    {selectedMessageIds.length}{" "}
+                    {selectedMessageIds.length === 1 ? "message" : "messages"} selected
                   </span>
 
                   <button
                     type="button"
-                    onClick={handleDeleteSelected}
+                    onClick={() => setDeleteModel(true)}
                     disabled={selectedMessageIds.length === 0}
-                    className={`p-2 rounded-xl transition-all duration-150 cursor-pointer
-              ${selectedMessageIds.length > 0
-                        ? 'text-red-500 hover:bg-red-50 active:bg-red-100'
-                        : 'text-gray-300 cursor-not-allowed'}
-            `}
+                    className={`p-2 rounded-xl transition-all duration-150 cursor-pointer ${selectedMessageIds.length > 0
+                      ? "text-red-500 hover:bg-red-50 active:bg-red-100"
+                      : "text-gray-300 cursor-not-allowed"
+                      }`}
                     title="Delete Selected"
                   >
                     <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
@@ -255,9 +468,13 @@ const ChatWindow = ({ className }) => {
         </div>
       </footer>
 
+      <DeleteMessagePopup
+        open={DeleteModel}
+        onClose={() => setDeleteModel(false)}
+        onDelete={handleDeleteSelected}
+      />
 
     </div>
-
   );
 };
 

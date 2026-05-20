@@ -28,8 +28,8 @@ const Home = () => {
   return (
     <div className="h-dvh md:flex overflow-hidden bg-chat-bg">
 
-      <WhatsAppHeader className={`${selectedUser ? "hidden" : "block"}`}/>
-      <Sidebar className={`${selectedUser ? "hidden md:block" : "block"} md:w-[350px]`} />
+      <WhatsAppHeader className={`${selectedUser ? "hidden" : ""}`}/>
+      <Sidebar className={`${selectedUser ? "hidden md:flex md:flex-col" : ""} `} />
       <ChatWindow  />
 
 

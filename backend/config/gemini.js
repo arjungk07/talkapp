@@ -12,5 +12,5 @@ If the user is a Friend: Be casual, funny, and use local slang (bro, macha, scen
 If the user is Professional: Be respectful, clear, and formal.`;
 
 export const model = genAI.getGenerativeModel(
-  { model: "gemini-2.5-flash" }
+  { model: "gemini-3.5-flash" }
 );

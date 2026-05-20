@@ -112,7 +112,7 @@ const Sidebar = ({ className }) => {
   };
 
   return (
-    <div className={`${className} flex flex-col w-full h-full bg-chat-sidebar border-r border-chat-border overflow-hidden`}>
+    <div className={`${className} md:min-w-[320px] h-full bg-chat-sidebar border-r border-chat-border overflow-hidden`}>
       {/* Header */}
       <div className="px-4 md:p-5 shrink-0">
         <div className="hidden md:flex justify-between items-center">

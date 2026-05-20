@@ -152,7 +152,7 @@ const getUnreadCounts = async (req, res) => {
 const deleteMessages = async (req, res) => {
   try {
     const { messageIds } = req.body;
-    const userId = req.user._id; // Extracted from your authentication middleware
+  
 
     // Validation Guard Checks
     if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
@@ -166,8 +166,9 @@ const deleteMessages = async (req, res) => {
      */
     const result = await Message.deleteMany({
       _id: { $in: messageIds },
-      senderId: userId // Removable if you allow either participant to clear history chat bubbles
     });
+
+    console.log(result);
 
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: "No messages found or you are unauthorized to delete them" });
@@ -175,7 +176,7 @@ const deleteMessages = async (req, res) => {
 
     return res.status(200).json({
       message: `${result.deletedCount} messages deleted successfully`,
-      deletedCount: result.deletedCount
+      deletedCount: result.deletedCount 
     });
 
   } catch (error) {
