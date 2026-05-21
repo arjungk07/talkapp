@@ -116,7 +116,7 @@ export const useMessages = (selectedUser) => {
   }, [socket, selectedUser]);
 
   // Message send
-  const sendMessage = async (text, isActive) => {
+  const sendMessage = async (text, isActive , replyingTo) => {
     if (!text.trim() || !selectedUser || sending) return;
 
     setSending(true);
@@ -125,6 +125,7 @@ export const useMessages = (selectedUser) => {
         receiverId: selectedUser._id,
         text: text.trim(),
         isActive: isActive,
+        replyingTo:replyingTo
       });
 
       console.log("Data from API:", data);

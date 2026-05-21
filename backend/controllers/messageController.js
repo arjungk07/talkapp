@@ -44,8 +44,9 @@ const getMessages = async (req, res) => {
 
 const sendMessage = async (req, res) => {
   try {
-    const { receiverId, text, isActive } = req.body;
+    const { receiverId, text, isActive , replyingTo } = req.body;
     const senderId = req.user._id;
+
 
     if (!receiverId || !text) {
       return res.status(400).json({ message: "Data missing" });
@@ -59,7 +60,16 @@ const sendMessage = async (req, res) => {
       senderId,
       receiverId,
       text: text.trim(),
+      replyingTo: replyingTo ? {
+        _id: replyingTo._id,
+        userId:senderId,
+        text: replyingTo.text,
+      } : null,
     });
+
+    console.log(userMessage);
+
+
 
     if (!isActive) return res.status(201).json([userMessage]);
 
@@ -193,6 +203,7 @@ const addMessageReaction = async (req, res) => {
     const userId = req.user._id; // Extracted from your authentication middleware
 
     const message = await Message.findById(messageId);
+    
     if (!message) return res.status(404).json({ message: "Message not found" });
 
     // Check if user already reacted to this message

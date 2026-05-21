@@ -18,8 +18,14 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       maxlength: [2000, "Message cannot exceed 2000 characters"],
     },
+   replyingTo: {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
+      userId : {type : mongoose.Schema.Types.ObjectId, ref: 'User' }, 
+      text: { type: String },
+    },
     reactions: [
       {
+        _id:{type:mongoose.Schema.Types.ObjectId, ref: 'Message' },
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         emoji: { type: String }
       }

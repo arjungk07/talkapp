@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { formatDistanceToNow } from "date-fns";
 import { FiLogOut } from "react-icons/fi";
 import LogOut from './LogOut';
+import LoadingScreen from "./LoadingScreen";
 
 const Sidebar = ({ className }) => {
   const { onlineUsers, selectedUser, setSelectedUser } = useAuth();
@@ -113,6 +114,9 @@ const Sidebar = ({ className }) => {
 
   return (
     <div className={`${className} md:min-w-[320px] h-full bg-chat-sidebar border-r border-chat-border overflow-hidden`}>
+
+
+
       {/* Header */}
       <div className="px-4 md:p-5 shrink-0">
         <div className="hidden md:flex justify-between items-center">
@@ -141,15 +145,8 @@ const Sidebar = ({ className }) => {
       {/* User List Container */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-2">
         {initialLoading && users.length === 0 ? (
-          /* Skeleton Loader */
-          <div className="space-y-3 p-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="w-12 h-12 rounded-full bg-chat-surface" />
-                <div className="flex-1 space-y-2"><div className="h-3 bg-chat-surface rounded w-3/4" /></div>
-              </div>
-            ))}
-          </div>
+          // loading screen
+          <LoadingScreen initialLoading={initialLoading} usersCount={users.length} />
         ) : users.length === 0 ? (
           <div className="text-center py-10 text-chat-muted text-sm">No contacts found</div>
         ) :
