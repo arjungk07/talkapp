@@ -138,17 +138,7 @@ const ChatWindow = ({ className }) => {
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Scroll to bottom using a callback ref on the sentinel div.
-  // Runs whenever messages or isTyping changes — no useEffect required.
-  const setBottomRef = useCallback(
-    (node) => {
-      if (node) {
-        node.scrollIntoView({ behavior: "smooth" });
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [messages, isTyping]
-  );
+  
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -243,34 +233,11 @@ const ChatWindow = ({ className }) => {
 
   // ── Main chat layout ────────────────────────────────────────────────────────
   return (
-    /*
-     * KEY LAYOUT STRATEGY — ChatGPT-style, keyboard-aware, zero JS:
-     *
-     * 1. Outer wrapper  →  height: 100dvh
-     *    dvh = "dynamic viewport height". When the iOS/Android soft keyboard
-     *    opens, the browser SHRINKS the dvh value, so the whole flex column
-     *    naturally compresses upward. No resize listener. No useEffect.
-     *    (100vh does NOT shrink on iOS Safari — that's why it fails.)
-     *
-     * 2. Header  →  flex-shrink: 0   — fixed height, never squishes.
-     *
-     * 3. Messages  →  flex: 1; min-height: 0; overflow-y: auto
-     *    - flex:1 fills remaining vertical space.
-     *    - min-height:0 is REQUIRED — without it a flex child refuses to
-     *      shrink below its content height, causing overflow.
-     *    - overflow-y:auto gives the internal scrollbar.
-     *
-     * 4. Footer  →  flex-shrink: 0   — always visible; keyboard pushes it
-     *    up because the container height shrank via dvh.
-     *
-     * NO position:fixed, NO window.visualViewport, NO resize listeners.
-     */
+   
     <div
       className={`${className} flex flex-col w-full bg-chat-bg overflow-hidden`}
       style={{
         height: "100dvh",
-        // Fallback for browsers without dvh support. On those browsers the
-        // footer may be hidden behind the keyboard, but it's a small minority.
         minHeight: "100vh",
       }}
     >
@@ -330,8 +297,7 @@ const ChatWindow = ({ className }) => {
             </>
           )}
 
-          {/* Sentinel: callback ref auto-scrolls on new messages / typing */}
-          <div ref={setBottomRef} />
+          <div />
         </div>
       </main>
 
