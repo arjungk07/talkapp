@@ -266,7 +266,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           }
 
 
-          <p className={`text-sm ${message.replyingTo ? "ps-2" : ""}  leading-relaxed select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
+          <p className={`text-sm ${message.replyingTo ? "ps-2" : ""}  leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
             {message.text}
           </p>
 

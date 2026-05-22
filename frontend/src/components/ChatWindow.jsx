@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { Trash2, X } from "lucide-react";
 import { useMessages } from "../hooks/useMessages";
 import ChatHeader from "./ChatHeader";
 import MessageBubble from "./MessageBubble";
@@ -8,6 +9,7 @@ import { useMessagesContext } from "../context/MessagesContext";
 import TalkAppWallpaper from "../components/TalkAppWallpaper";
 import ReplyPreview from "./ReplyPreview";
 import { motion, AnimatePresence } from "framer-motion";
+import { Keyboard } from "lucide-react";
 
 
 const ChatWindow = () => {
@@ -26,11 +28,35 @@ const ChatWindow = () => {
   const [DeleteModel, setDeleteModel] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null); // reply state
   const [text, setText] = useState("");
-  const bottomRef = useRef(null);
   const inputRef = useRef(null); // focus input when reply is set
+  const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Auto scroll to bottom
+
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+
+    const handleViewportChange = () => {
+      const keyboardH = window.innerHeight - viewport.height - viewport.offsetTop;
+      setKeyboardHeight(keyboardH > 0 ? keyboardH : 0);
+
+
+    };
+
+    viewport.addEventListener("resize", handleViewportChange);
+    viewport.addEventListener("scroll", handleViewportChange);
+
+    return () => {
+      viewport.removeEventListener("resize", handleViewportChange);
+      viewport.removeEventListener("scroll", handleViewportChange);
+    };
+  }, []);
+
+ // Auto scroll to bottom on new messages / typing indicator
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
@@ -79,7 +105,7 @@ const ChatWindow = () => {
   const handleDeleteSelected = async () => {
     console.log("Selected Message IDs", selectedMessageIds);
     setIsSelectMode(false);
-
+    setDeleteModel(false);
     try {
       await deleteMessages(selectedMessageIds);
       console.log("Messages deleted successfully");
@@ -227,17 +253,22 @@ const ChatWindow = () => {
 
   return (
 
-    <div className={`fixed inset-0 md:static md:inset-auto  w-full h-dvh  flex flex-col overflow-hidden bg-chat-bg`}>
+    <div className={`flex flex-col w-full h-dvh overflow-hidden bg-chat-bg`}>
       {/* ── HEADER — never moves ── */}
-      <div className="shrink-0 z-50 bg-chat-bg">
+      <div className={`fixed top-0 w-full shrink-0 ${DeleteModel ? "z-0" : "z-99"} bg-white`}>
         <ChatHeader />
       </div>
 
       {/* ── MESSAGES — scrollable, fills remaining space ── */}
       <main
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        className="flex-1 w-full overflow-y-auto overflow-x-hidden custom-scrollbar"
+        style={{
+          paddingTop: "120px",
+          paddingBottom: `${keyboardHeight + 80}px`,  // ✅ adjusts when keyboard opens
+          transition: 'paddingBottom 0.2s ease'
+        }}>
 
-        <div className="w-full px-4 lg:px-6 py-4 pb-6">
+        <div className="w-full px-4 lg:px-6 ">
           <TalkAppWallpaper />
 
           {loading ? (
@@ -290,7 +321,13 @@ const ChatWindow = () => {
 
       {/* ── FOOTER — sticky at visual bottom, never moves ── */}
       <footer
-        className="shrink-0 z-50 bg-chat-bg px-4 py-3">
+        className={`sticky right-0 bottom-0 ${DeleteModel ? "z-0" : "z-99"} bg-white px-4 py-2`}
+       style={{
+        bottom:`${keyboardHeight}px`,
+        transition:"bottom 0.2 ease"
+       }}
+
+      >
 
         <form
           onSubmit={handleSend}
@@ -307,26 +344,17 @@ const ChatWindow = () => {
               </div>
 
               {/* input field */}
-              <div className="flex w-full">
-                <input
-                  type="text"
+              <div className="flex items-center justify-center w-full">
+                <textarea
+                  rows={1}
                   autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  name="talkapp-int"
-                  data-form-type="other"
-                  data-lpignore="true"
-                  data-1p-ignore
-                  enterKeyHint="send"
-                  inputMode="text"
                   ref={inputRef}
                   value={text}
                   onChange={handleTyping}
                   onKeyDown={handleKeyDown}
                   placeholder={`Message to ${selectedUser.name}...`}
                   maxLength={2000}
-                  className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none px-4  text-chat-text placeholder-chat-muted text-sm pr-12"
+                  className="w-full bg-transparent focus:ring-0 focus:outline-none px-3 text-chat-text placeholder-chat-muted text-sm"
                 />
                 {text.length > 1800 && (
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-chat-muted">

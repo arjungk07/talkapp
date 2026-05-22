@@ -10,11 +10,11 @@ import { useAuth } from "../context/AuthContext";
  *   onCancel    {function}     — called when the X button is clicked
  */
 const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
-  const { user, selectedUser } = useAuth();
+  const { user } = useAuth();
 
   // Who sent the message we're replying to?
   const isOwnMessage = replyingTo?.senderId === user?._id;
-  const senderLabel = isOwnMessage ? "You" : selectedUser.name;
+  const senderLabel = isOwnMessage ? "You" : user.name;
 
   // Truncate long messages so the bar stays compact
   const previewText =
@@ -87,8 +87,8 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
           <motion.div
 
             className="relative
-            flex items-center gap-4 
-            bg-chat-panel/10
+            flex items-center 
+            bg-chat-accent/5
             border border-chat-border
             rounded-2xl
             shadow-[0_2px_12px_rgba(0,0,0,0.06)]
@@ -104,7 +104,7 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
               <p className="text-sm talkapp-font font-semibold text-chat-text truncate leading-tight mb-2">
                 {senderLabel}
               </p>
-              <p className={`text-md google-sans leading-relaxed select-text wrap-break-word cursor-text whitespace-pre-wrap `}>
+              <p className={`text-md google-sans leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap `}>
                 {replyingTobubble.text}
               </p>
             </div>
