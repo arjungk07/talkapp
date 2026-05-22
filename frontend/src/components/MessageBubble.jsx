@@ -235,37 +235,38 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
       <div className={`
         animate-bubble-pop
         max-w-[90%] sm:max-w-[75%] md:max-w-[50%]
-        flex flex-col gap-1 relative z-10
+        flex flex-col relative z-10
         ${isSent ? "items-end" : "items-start"}
         ${isSent && showPicker ? "order-2" : ""}
         ${isSelected ? "opacity-90 scale-[0.99] transition-all" : ""}
       `}>
 
-       
+
 
         <div className={`
-          relative overflow-hidden ${message.replyingTo ? "" : "px-5 py-2"}  flex flex-col 
-          text-[15px] font-medium rounded-[18px] transition-all duration-300
-          ${isSent
-            ? "bg-[linear-gradient(135deg,#C5E8FF_15%,#E8F7FF_100%)] text-[#1A1A1A]"
-            : "bg-chat-muted/15 text-[#2B2B2B]"}
-        `}>
+  relative overflow-visible ${message.replyingTo ? "p-px" : "px-6 py-1"} flex flex-col 
+  text-[15px] font-medium rounded-[14px] transition-all duration-300
+  ${isSent
+            ? "bg-chat-panel text-[#1A1A1A] rounded-br-md after:absolute after:bottom-0 after:-right-1.5 after:w-0 after:h-0 after:border-l-8 after:border-l-chat-panel after:border-t-8 after:border-t-transparent"
+            : "bg-chat-surface text-[#2B2B2B] rounded-bl-md before:absolute before:bottom-0 before:-left-1.5 before:w-0 before:h-0 before:border-r-8 before:border-r-chat-surface before:border-t-8 before:border-t-transparent"
+          }
+`}>
 
-           {/* ReplyPreview  */}
+          {/* ReplyPreview  */}
 
-        {
-          message.replyingTo &&
+          {
+            message.replyingTo &&
 
-          <div className={`${message.replyingTo ? "block w-full " : "hidden"}`}>
-            <ReplyPreview
-              replyingTobubble={message.replyingTo}
-            />
-          </div>
+            <div className={`${message.replyingTo ? "block " : "hidden"}`}>
+              <ReplyPreview
+                replyingTobubble={message.replyingTo}
+              />
+            </div>
 
-        }
+          }
 
-          
-          <p className={`text-sm ${message.replyingTo ? "px-5 py-1" : ""} leading-relaxed select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
+
+          <p className={`text-sm ${message.replyingTo ? "ps-2" : ""}  leading-relaxed select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
             {message.text}
           </p>
 

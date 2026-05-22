@@ -9,9 +9,9 @@ export default {
           panel: "#FEF2FE",         // soft pink
           surface: "#f5f5f7",       // Light gray 
           border: "#e5e5e5",        // light gray
-          accent: "#112A46",        // Keeping your signature purple
-          "accent-light": "#9d8ff",
-          "accent-dim": "#7c6af715",
+          accent: "#112A46",        // Keeping your signature green
+          accent_light: "#9d8ff",
+          accent_dim: "#7c6af715",
           sent: "#7c6af7",          // White text will pop well on this
           received: "#eeeef2",      // Slightly darker than the surface for bubble distinction
           online: "#22c55e",        // Standard emerald green for light mode

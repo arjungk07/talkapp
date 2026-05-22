@@ -88,24 +88,23 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
 
             className="relative
             flex items-center gap-4 
-            bg-white
+            bg-chat-panel/10
             border border-chat-border
             rounded-2xl
             shadow-[0_2px_12px_rgba(0,0,0,0.06)]
             overflow-hidden
           "
           >
-            <div class="absolute -inset-6 bg-[linear-gradient(135deg,#F4FBFF_0%,#E6F4FF_50%,#FFFFFF_100%)] blur-3xl opacity-60"></div>
 
             {/* Left accent bar — same colour as sent bubble */}
-            <div className="w-1 self-stretch rounded-full bg-chat-accent shrink-0" />
+            <div className="w-1 self-stretch rounded-full bg-chat-text shrink-0" />
 
             {/* Text */}
             <div className="flex-1 py-3 px-2 min-w-0">
-              <p className="text-sm talkapp-font font-semibold text-chat-accent truncate leading-tight mb-2">
+              <p className="text-sm talkapp-font font-semibold text-chat-text truncate leading-tight mb-2">
                 {senderLabel}
               </p>
-              <p className={`text-sm google-sans leading-relaxed select-text wrap-break-word cursor-text whitespace-pre-wrap `}>
+              <p className={`text-md google-sans leading-relaxed select-text wrap-break-word cursor-text whitespace-pre-wrap `}>
                 {replyingTobubble.text}
               </p>
             </div>
