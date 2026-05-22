@@ -8,7 +8,7 @@ import TypingIndicator from "./TypingIndicator";
 import { useMessagesContext } from "../context/MessagesContext";
 import TalkAppWallpaper from "../components/TalkAppWallpaper";
 import ReplyPreview from "./ReplyPreview";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, color, delay } from "framer-motion";
 import { Keyboard } from "lucide-react";
 
 
@@ -56,7 +56,7 @@ const ChatWindow = () => {
     };
   }, []);
 
- // Auto scroll to bottom on new messages / typing indicator
+  // Auto scroll to bottom on new messages / typing indicator
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
@@ -118,6 +118,20 @@ const ChatWindow = () => {
 
   };
 
+
+  // const handleDeleteforMe = async () =>
+  // {
+  //   setIsSelectMode(false);
+  //   setDeleteModel(false);
+  //   try{
+  //     await deleteMsgForMe(selectedMessageIds);
+  //     setSelectedMessageIds([]);
+  //   }catch(err)
+  //   {
+  //     console.log("Failed to delete messages:",err);
+  //   }
+  // }
+
   const handleEmojiClick = async (messageId, emoji) => {
 
     try {
@@ -161,6 +175,28 @@ const ChatWindow = () => {
 
   // ── Delete Confirm Popup ────────────────────────────────────────────────
   function DeleteMessagePopup({ open, onClose, onDelete }) {
+
+    const option = [
+      {
+        label: "Delete for me",
+        // Light red/orange gradient
+        style: "bg-linear-to-r from-red-500 to-rose-500 text-white border-transparent",
+        onClick: () => handleDeleteForMe(currentMessageId)
+      },
+      {
+        label: "Delete for Everyone",
+        // Deep red/crimson gradient (stands out more)
+        style: "bg-linear-to-r from-red-600 to-rose-700 text-white border-transparent",
+        onClick: () => handleDeleteSelected()
+      },
+      {
+        label: "Cancel",
+        // Neutral zinc look
+        style: "bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200",
+        onClick: () => setDeleteModel(false)
+      }
+    ];
+
     return (
       <AnimatePresence>
         {open && (
@@ -214,33 +250,28 @@ const ChatWindow = () => {
                   </p>
                 </div>
 
-                <div className="mt-8 flex gap-3">
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={onClose}
-                    className="flex-1 cursor-pointer rounded-full border border-zinc-200 bg-zinc-100 py-3 text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-200"
-                  >
-                    Cancel
-                  </motion.button>
+                <div className="mt-8 flex flex-col gap-3">
 
-                  <motion.button
-                    whileHover={{
-                      scale: 1.03,
-                      boxShadow: "0px 10px 25px rgba(239,68,68,0.35)",
-                    }}
-                    whileTap={{ scale: 0.94 }}
-                    onClick={onDelete}
-                    className="relative cursor-pointer flex-1 overflow-hidden rounded-full bg-linear-to-r from-red-500 to-rose-500 py-3 text-sm font-semibold text-white"
-                  >
-                    <motion.span
-                      initial={{ x: "-120%" }}
-                      animate={{ x: "220%" }}
-                      transition={{ repeat: Infinity, duration: 2.2, ease: "linear" }}
-                      className="absolute inset-0 w-1/3 skew-x-12 bg-white/30 blur-md"
-                    />
-                    <span className="relative z-10">Delete</span>
-                  </motion.button>
+                  {
+                    option.map((opt, index) => (
+                      <motion.button
+                        key={index}
+                        // 1. Scale up slightly on hover and loop the brightness/opacity for a pulse effect
+                        whileHover={{
+                          scale: 1.03,
+                          transition: { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
+                        }}
+                        // 2. Scale down slightly when clicked
+                        whileTap={{ scale: 0.96 }}
+                        onClick={opt.onClick}
+                        className={`${opt.style} md:opacity-70 flex-1 cursor-pointer rounded-full border py-3 text-sm font-semibold transition-all shadow-sm hover:opacity-100`}
+                      >
+                        {opt.label}
+                      </motion.button>
+                    ))
+                  }
+
+
                 </div>
               </div>
             </motion.div>
@@ -322,10 +353,10 @@ const ChatWindow = () => {
       {/* ── FOOTER — sticky at visual bottom, never moves ── */}
       <footer
         className={`sticky right-0 bottom-0 ${DeleteModel ? "z-0" : "z-99"} bg-white px-4 py-2`}
-       style={{
-        bottom:`${keyboardHeight}px`,
-        transition:"bottom 0.2 ease"
-       }}
+        style={{
+          bottom: `${keyboardHeight}px`,
+          transition: "bottom 0.2 ease"
+        }}
 
       >
 

@@ -177,7 +177,7 @@ export const useMessages = (selectedUser) => {
     }
   };
 
-
+   // delete for everyone and also delete in db
   const deleteMessages = async (selectedMessageIds) => {
     if (!socket || !selectedUser || !selectedMessageIds || !Array.isArray(selectedMessageIds) || selectedMessageIds.length === 0) return;
 
@@ -202,6 +202,7 @@ export const useMessages = (selectedUser) => {
       console.error("Error deleting messages:", err.response?.data?.message || err.message);
     }
   };
+
 
   const emitTyping = () => {
     socket?.emit("typing", {
