@@ -4,14 +4,13 @@ import { FaUserAlt } from "react-icons/fa";
 import ai from '../assets/image/talk_ai_icon.png';
 import { formatDistanceToNow } from "date-fns";
 import { useMessages } from "../hooks/useMessages";
-import { useMessagesContext } from "../context/MessagesContext";
-
+import { useAppContext } from "../context/AppContext";
 
 
 
 const HeaderActionsBar = () => {
 
-    const { isActive, setIsActive } = useMessagesContext();
+    const { isActive, setIsActive } = useAppContext ();
     
     const handleClick = () => {
         setIsActive(!isActive);
@@ -109,7 +108,7 @@ const ChatHeader = () => {
     return (
         <div>
             {/* CHAT HEADER */}
-            <header className="px-4 lg:px-6 py-4 border-b border-chat-border bg-chat-bg  flex items-center gap-3 shrink-0 z-10">
+            <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center gap-3 shrink-0 z-10">
 
                 {/* user profile  */}
                 <div className="relative">

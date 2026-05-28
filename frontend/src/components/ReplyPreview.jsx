@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -9,12 +10,15 @@ import { useAuth } from "../context/AuthContext";
  *   replyingTo  {object|null}  — the message being replied to (null = hidden)
  *   onCancel    {function}     — called when the X button is clicked
  */
-const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
+const ReplyPreview = ({ replyingTo, replyingTobubble, onReplyCancel,imageTo , onImgCancel }) => {
+
+
   const { user } = useAuth();
+
 
   // Who sent the message we're replying to?
   const isOwnMessage = replyingTo?.senderId === user?._id;
-  const senderLabel = isOwnMessage ? "You" : user.name;
+  const senderLabel = isOwnMessage ? "You" : "Them";
 
   // Truncate long messages so the bar stays compact
   const previewText =
@@ -61,7 +65,7 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
           {/* Cancel button */}
           <motion.button
             type="button"
-            onClick={onCancel}
+            onClick={onReplyCancel}
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -114,6 +118,64 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onCancel }) => {
           </motion.div>
         )
       }
+
+      {imageTo && (
+        <motion.div
+          key="reply-preview"
+          /* ── Slide up from bottom + fade in ── */
+          initial={{ opacity: 0, y: 12, scaleY: 0.85 }}
+          animate={{ opacity: 1, y: 0, scaleY: 1 }}
+          exit={{ opacity: 0, y: 10, scaleY: 0.9 }}
+          transition={{ type: "spring", stiffness: 380, damping: 28 }}
+          style={{ transformOrigin: "bottom" }}
+          className="
+      mb-1
+      flex items-center 
+      bg-white
+      border border-chat-border
+      rounded-2xl
+      px-4 py-2.5
+      shadow-[0_2px_12px_rgba(0,0,0,0.06)]
+      overflow-hidden
+    "
+        >
+
+          {/* Text / Image Container */}
+          <div className="rounded-xl overflow-hidden bg-gray-50 border border-gray-100 max-w-xs">
+            {imageTo?.path && (
+              <img
+                src={imageTo.path}
+                alt="preview"
+                className="w-20 h-20 object-cover rounded-xl"
+              />
+            )}
+          </div>
+
+          {/* Cancel button */}
+          <motion.button
+            type="button"
+            onClick={onImgCancel}
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="
+        w-8 h-8 shrink-0
+        flex items-center justify-center
+        rounded-full
+        bg-gray-100 hover:bg-gray-200
+        text-gray-500
+        transition-colors duration-150
+        cursor-pointer
+        ml-auto
+      "
+            aria-label="Cancel reply"
+          >
+            <X size={16} strokeWidth={2.5} />
+          </motion.button>
+
+        </motion.div>
+      )}
+
 
 
     </AnimatePresence>

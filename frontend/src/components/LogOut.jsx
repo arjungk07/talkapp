@@ -3,9 +3,11 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api"; // Assuming this is your axios instance
 import toast from "react-hot-toast";
+import { useAppContext } from '../context/AppContext';
 
 const Logout = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
+  const {setSetting} = useAppContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +28,7 @@ const Logout = ({ isOpen, onClose }) => {
 
       // 2. Clear LocalStorage and Reset Auth State
       logout();
+      setSetting(false);
 
       // 3. UI Feedback and Redirect
       toast.success("Log Out successfully ✅");
@@ -35,12 +38,13 @@ const Logout = ({ isOpen, onClose }) => {
       toast.error(err.response?.data?.message || "Failed to Log Out ❌");
     } finally {
       setLoading(false);
+      setSetting(false)
       onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 google-sans]">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 md:backdrop-blur-sm p-4 google-sans]">
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
         <div className="p-6 text-center">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import MessageActionsBar from "../components/MessageActionBar";
 import { useAuth } from "../context/AuthContext";
-import { useMessagesContext } from "../context/MessagesContext";
+import { useAppContext } from "../context/AppContext";
 import EmojiPicker from "emoji-picker-react";
 import ReplyPreview from "./ReplyPreview";
 
@@ -16,8 +16,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
     isShowMode, setIsShowMode,
     isSelectMode, setIsSelectMode,
     selectedMessageIds, setSelectedMessageIds,
-    showPicker, setShowPicker,
-  } = useMessagesContext();
+    showPicker, setShowPicker, selectedMsg, setSelectedMsg
+  } = useAppContext();
 
   if (!message || !message.senderId || !user) return null;
 
@@ -39,6 +39,35 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
   const replyIconScale = useTransform(x, [0, REPLY_THRESHOLD * 0.7, REPLY_THRESHOLD], [0.6, 0.85, 1.15]);
   const bubbleScale = useTransform(x, [0, MAX_DRAG], [1, 0.97]);
 
+
+
+  // ── Click-outside: action bar ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isShowMode || !isSelected) return;
+    const onDown = (e) => {
+      if (!bubbleRef.current?.contains(e.target) && !actionBarRef.current?.contains(e.target)) {
+        setIsShowMode(false);
+        setSelectedMessageIds([]);
+        setSelectedMsg([]);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [isShowMode, isSelected, selectedMessageIds]);
+
+  // ── Click-outside: emoji picker ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!showPicker) return;
+    const onDown = (e) => {
+      if (bubbleRef.current && !bubbleRef.current.contains(e.target)) {
+        if (e.target.closest(".emoji-toggle-btn")) return;
+        setShowPicker(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [showPicker]);
+
   // ── Drag callbacks ───────────────────────────────────────────────────────────
   const handleDragStart = () => {
     // Cancel long-press so drag and select-mode never fire together
@@ -56,6 +85,36 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
   const handleDragEnd = () => {
     animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
     replyFired.current = false;
+  };
+
+
+  // ── Selection helpers ────────────────────────────────────────────────────────
+  const triggerSelect = () => {
+    // 1. Always get latest state via functional update
+    if (typeof setSelectedMsg === "function") {
+      setSelectedMsg((prevMsg) => {
+        const currentMsg = Array.isArray(prevMsg) ? prevMsg : [];
+
+
+
+        const isAlreadySelected = currentMsg.some((msg) => msg._id === message._id);
+
+        return isAlreadySelected
+          ? currentMsg.filter((msg) => msg._id !== message._id)
+          : [...currentMsg, message];
+      });
+    }
+
+    // 2. Same fix for selectedMessageIds
+    if (typeof setSelectedMessageIds === "function") {
+      setSelectedMessageIds((prevIds) => {
+        const currentIds = Array.isArray(prevIds) ? prevIds : [];
+
+        return currentIds.includes(message._id)
+          ? currentIds.filter((id) => id !== message._id)
+          : [...currentIds, message._id];
+      });
+    }
   };
 
   // ── Long-press (mobile select) ───────────────────────────────────────────────
@@ -77,55 +136,48 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
     triggerSelect();
   };
 
-  // ── Selection helpers ────────────────────────────────────────────────────────
-  const triggerSelect = () => {
-    if (typeof setSelectedMessageIds === "function" && Array.isArray(selectedMessageIds)) {
-      setSelectedMessageIds(
-        selectedMessageIds.includes(message._id)
-          ? selectedMessageIds.filter((id) => id !== message._id)
-          : [...selectedMessageIds, message._id]
-      );
+
+
+  const handleToggleSelectMessage = (message) => {
+    // Guard clause in case message is undefined or missing an _id
+    if (!message || !message._id) return;
+    const messageId = message._id;
+
+    // 1. Handle selectedMsg (Array of Message Objects)
+    if (typeof setSelectedMsg === "function") {
+      setSelectedMsg((prev) => {
+        // Normalize to array
+        const arr = Array.isArray(prev) ? prev : prev != null ? [prev] : [];
+
+        // Check if the object already exists by matching its _id
+        const isAlreadySelected = arr.some((msg) => msg && msg._id === messageId);
+
+        return isAlreadySelected
+          ? arr.filter((msg) => msg && msg._id !== messageId) // Remove object
+          : [...arr, message];                                // Add entire object
+      });
+    }
+
+    // 2. Handle selectedMessageIds (Array of IDs)
+    if (typeof setSelectedMessageIds === "function") {
+      setSelectedMessageIds((prev) => {
+        // Normalize to array
+        const arr = Array.isArray(prev) ? prev : prev != null ? [prev] : [];
+
+        return arr.includes(messageId)
+          ? arr.filter((id) => id !== messageId) // Remove ID
+          : [...arr, messageId];                 // Add ID
+      });
     }
   };
 
-  const handleToggleSelectMessage = (messageId) => {
-    setSelectedMessageIds((prev) => {
-      const arr = Array.isArray(prev) ? prev : prev != null ? [prev] : [];
-      return arr.includes(messageId) ? arr.filter((id) => id !== messageId) : [...arr, messageId];
-    });
-  };
-
   const handleRowClick = () => {
-    if (isSelectMode) handleToggleSelectMessage(message._id);
+    if (isSelectMode) handleToggleSelectMessage(message);
   };
 
   const handledelete = () => { setIsSelectMode(true); setIsShowMode(false); };
 
-  // ── Click-outside: action bar ────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isShowMode || !isSelected) return;
-    const onDown = (e) => {
-      if (!bubbleRef.current?.contains(e.target) && !actionBarRef.current?.contains(e.target)) {
-        setIsShowMode(false);
-        setSelectedMessageIds([]);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [isShowMode, isSelected, selectedMessageIds]);
 
-  // ── Click-outside: emoji picker ──────────────────────────────────────────────
-  useEffect(() => {
-    if (!showPicker) return;
-    const onDown = (e) => {
-      if (bubbleRef.current && !bubbleRef.current.contains(e.target)) {
-        if (e.target.closest(".emoji-toggle-btn")) return;
-        setShowPicker(null);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [showPicker]);
 
   const isDragEnabled = !isSelectMode;
 
@@ -191,7 +243,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           type="checkbox"
           id={`select-${message._id}`}
           checked={isSelected}
-          onChange={(e) => { e.stopPropagation(); handleToggleSelectMessage(message._id); }}
+          onChange={(e) => { e.stopPropagation(); handleToggleSelectMessage(message); }}
           className="w-4 h-4 rounded text-green-600 focus:ring-green-500 cursor-pointer accent-green-600 transition-all duration-300 scale-110 animate-bubble-pop shrink-0"
         />
       )}
@@ -266,11 +318,11 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           }
 
 
-          <p className={`text-sm ${message.replyingTo ? "ps-2" : ""}  leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
+          <p className={`text-sm ${message.replyingTo ? "ps-3 pe-3" : ""}  leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
             {message.text}
           </p>
 
-          <div className="flex items-center gap-1 mt-0.5 justify-end">
+          <div className={`flex items-center gap-1 mt-0.5 justify-end ${message.replyingTo ? "px-2 pb-1" : ""}`}>
             <span className="text-[10px] text-chat-muted">
               {message.createdAt ? format(new Date(message.createdAt), "hh:mm a") : "--:--"}
             </span>

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import EmojiPicker from 'emoji-picker-react';
-import { useMessagesContext } from '../context/MessagesContext';
-
+import { useAppContext } from '../context/AppContext';
 // Reusable Button Component optimized for an overlay icon bar
 const ActionButton = ({ label, children,onClick, isDestructive = false }) => {
   return (
@@ -29,7 +28,7 @@ const ActionButton = ({ label, children,onClick, isDestructive = false }) => {
 
 export default function MessageActionsBar({messageId, handledelete}) {
  
-  const { isSelectMode, setIsSelectMode, isShowMode, setIsShowMode ,showPicker,setShowPicker} = useMessagesContext();
+  const { isSelectMode, setIsSelectMode, isShowMode, setIsShowMode ,showPicker,setShowPicker} = useAppContext();
 
   
   // State for toggling emoji picker visibility

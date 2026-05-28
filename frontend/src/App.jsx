@@ -3,7 +3,7 @@ import React from "react";
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { MessagesProvider } from "./context/MessagesContext";
+import { AppContextProvider } from "./context/AppContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -11,6 +11,9 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgetPassword"
 import VerifyOtp from "./pages/VerfiyOtp";
 import ResetPassword from "./pages/ResetPassword";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import { useEffect } from "react";
 
 const AppRoutes = () => {
   const { user } = useAuth();
@@ -44,12 +47,18 @@ const AppRoutes = () => {
 };
 
 function App() {
+
+    useEffect(() => {
+    AOS.init({ duration: 1000 });
+  }, []);
+
+
   return (
     // basename is not needed with HashRouter on GH Pages usually, 
     // but you can keep it if your links include /talkapp/
     <Router>
       <AuthProvider>
-        <MessagesProvider>
+        <AppContextProvider>
         <AppRoutes />
         <Toaster
           position="top-center"
@@ -70,7 +79,7 @@ function App() {
             },
           }}
         />
-        </MessagesProvider>
+        </AppContextProvider>
       </AuthProvider>
     </Router>
   );

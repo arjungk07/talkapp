@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const getInitialState = () => {
     try {
       const item = window.localStorage.getItem("talkapp-user");
+      console.log(item);
       // Handle the case where the string itself is "undefined"
       if (!item || item === "undefined") return null;
       return JSON.parse(item);
@@ -45,7 +46,6 @@ export const AuthProvider = ({ children }) => {
       setOnlineUsers([]);
     }
 
-
   }, [user]);
 
   const login = (userData) => {
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, socket, onlineUsers, selectedUser, setSelectedUser, profileImage, setProfileImage }}>
+    <AuthContext.Provider value={{ user,setUser,login, logout, socket, onlineUsers, selectedUser, setSelectedUser, profileImage, setProfileImage }}>
       {children}
     </AuthContext.Provider>
   );

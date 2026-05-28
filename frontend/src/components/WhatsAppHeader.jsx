@@ -8,67 +8,116 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import LogOut from '../components/LogOut';
 import { FiLogOut } from "react-icons/fi";
+import { useAppContext } from '../context/AppContext';
 
 
+
+export function Profile() {
+
+    const { profileImage, user } = useAuth();
+    const {setSetting} = useAppContext();
+
+    const userProfileImage = profileImage || user?.profilePic;
+
+
+    return (
+
+        <>
+
+
+            <div className="p-2">
+
+                <div
+                    onClick={() => setSetting(true)}
+                    className="
+      relative
+      w-10
+      h-10
+      md:w-12
+      md:h-12
+      cursor-pointer
+      group
+    "
+                >
+                   
+
+                    {/* ROTATING RING */}
+                    <div
+                        className="
+        absolute
+        inset-0
+        rounded-full
+        bg-linear-to-tr
+        from-yellow-400
+        via-pink-500
+        to-purple-600
+        animate-spin
+      "
+                    />
+
+                    {/* PROFILE */}
+                    <div
+                        className="
+        absolute
+        inset-0.5
+        rounded-full
+        overflow-hidden
+        bg-white
+        flex
+        items-center
+        justify-center
+      "
+                    >
+
+                        {userProfileImage ? (
+                            <img
+                                src={userProfileImage}
+                                alt="profile"
+                                className="
+            w-full
+            h-full
+            object-cover
+            group-hover:scale-110
+            transition-transform
+            duration-300
+          "
+                            />
+                        ) : (
+                            <CgProfile
+                                size={22}
+                                className="text-zinc-400"
+                            />
+                        )}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </>
+    );
+}
 
 
 // ---------------- MAIN HEADER COMPONENT ----------------
 const WhatsAppHeader = ({ className }) => {
+
+
+    const {setting,setSetting,isLogoutModalOpen,setIsLogoutModalOpen} = useAppContext();
+
     const [activeTab, setActiveTab] = useState('chats');
     const galleryRef = useRef();
 
-    const profileRef = useRef();
-    const { profileImage, setProfileImage, user } = useAuth();
-    const [loading, setLoading] = useState(false);
-    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-
-
-
-    // 2. Modified Upload Function (now accepts formData as an argument)
-    const uploadImage = async (formData) => {
-        try {
-            setLoading(true);
-            const res = await api.post("/api/upload-profile", formData);
-            const data = res.data;
-
-            setProfileImage(data.imageUrl);
-
-            console.log("profile", profileImage)
-
-            const updatedUser = { ...user, profilePic: data.imageUrl };
-            localStorage.setItem("talkapp-user", JSON.stringify(updatedUser));
-
-            toast.success("Profile Updated!");
-        } catch (err) {
-            toast.error("Upload failed!");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append("profile", file);
-        formData.append("userId", user._id);
-
-        // Call the upload function specifically
-        uploadImage(formData);
-    };
 
 
     const navItems = [
-        { id: 'chats', icon: <MdMarkUnreadChatAlt size={25} hasBadge={true} /> },
+        { id: 'chats', icon: <MdMarkUnreadChatAlt size={25} /> },
     ];
 
 
 
-    const userProfileImage = profileImage || user?.profilePic;
 
 
     const MobileHeader = () => {
@@ -81,26 +130,23 @@ const WhatsAppHeader = ({ className }) => {
                     </h1>
 
                     <div className="flex items-center gap-3">
+                       
 
-                        {userProfileImage ? (
-                            <img src={userProfileImage} alt="profile" className="w-8 h-8 rounded-full object-cover" />
-                        ) : (
-                            <CgProfile size={22} className="text-zinc-400" />
-                        )}
+                    
+                        <Profile />
 
                         <button className="p-1 rounded-full cursor-pointer ">
                             <Camera size={22} />
                         </button>
 
 
-                        <button className="p-1 rounded-full cursor-pointer">
+                        <button 
+                        onClick={()=>setSetting(!setting)}
+                        className="p-1 rounded-full cursor-pointer">
                             <MoreVertical size={22} />
                         </button>
 
 
-                        <FiLogOut size={20} onClick={() => setIsLogoutModalOpen(true)} />
-
-                        <LogOut isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} />
 
 
                     </div>
@@ -122,27 +168,19 @@ const WhatsAppHeader = ({ className }) => {
             <header
                 className=" hidden md:flex flex-col h-screen w-16 bg-chat-panel border-r border-chat-border py-4 items-center justify-between"
             >
-                {/* Full screen loading overlay */}
-                {loading && (
-                    <div className="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm">
-                        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-black" />
-                        <p className="mt-4 font-medium text-black">loading...</p>
-                    </div>
-                )}
+
 
                 {/* Top Navigation */}
                 <div className="flex flex-col gap-4 w-full px-2">
                     {navItems.map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => setActiveTab(item.id)}
+                            onClick={() => {setActiveTab(item.id) , setSetting(false)}}
                             className={`relative w-12 h-12 rounded-full transition-all cursor-pointer flex justify-center items-center
-            ${activeTab === item.id ? 'bg-chat-accent/5 text-black' : 'text-zinc-400 hover:bg-chat-accent/5 hover:text-black'}`}
+            ${activeTab === item.id && !setting ? 'bg-chat-accent/5 text-black' : 'text-black/70 hover:bg-chat-accent/5 hover:text-black'}`}
                         >
                             {item.icon}
-                            {item.hasBadge && (
-                                <span className="absolute top-1 right-2 w-2.5 h-2.5 bg-green-400 rounded-full" />
-                            )}
+
                         </button>
                     ))}
                     <hr className="border border-chat-border my-2" />
@@ -150,7 +188,9 @@ const WhatsAppHeader = ({ className }) => {
 
                 {/* Bottom Actions */}
                 <div className="flex flex-col gap-4 items-center mb-2">
+
                     <input type="file" ref={galleryRef} className="hidden" accept="image/*" />
+
                     <button
                         onClick={() => galleryRef.current.click()}
                         className="text-zinc-400 rounded-full hover:bg-chat-accent/5 hover:text-black cursor-pointer p-4 transition-colors"
@@ -158,25 +198,10 @@ const WhatsAppHeader = ({ className }) => {
                         <GrGallery size={22} />
                     </button>
 
-                    <div className="p-2">
-                        <input
-                            type="file"
-                            ref={profileRef}
-                            onChange={handleFileChange}
-                            accept="image/*"
-                            className="hidden"
-                        />
-                        <div
-                            onClick={() => profileRef.current.click()}
-                            className="group relative cursor-pointer w-12 h-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center border-2 hover:border-yellow-400 transition-all"
-                        >
-                            {userProfileImage ? (
-                                <img src={userProfileImage} alt="profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <CgProfile size={25} className="text-zinc-400" />
-                            )}
-                        </div>
-                    </div>
+                    <Profile />
+
+
+
                 </div>
             </header>
         </>

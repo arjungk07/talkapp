@@ -1,40 +1,53 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, ArrowDown, PlusIcon, ImageIcon, PaperclipIcon, CameraIcon, Upload } from "lucide-react";
 import { useMessages } from "../hooks/useMessages";
 import ChatHeader from "./ChatHeader";
 import MessageBubble from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
-import { useMessagesContext } from "../context/MessagesContext";
 import TalkAppWallpaper from "../components/TalkAppWallpaper";
+import { useAppContext } from "../context/AppContext";
 import ReplyPreview from "./ReplyPreview";
-import { motion, AnimatePresence, color, delay } from "framer-motion";
 import { Keyboard } from "lucide-react";
+import { format, set } from "date-fns";
+import { UploadBar, DeleteMessagePopup, DeleteAction } from "./ActionBars";
+
+
+
 
 
 const ChatWindow = () => {
-  const { selectedUser } = useAuth();
+  const { user, selectedUser } = useAuth();
   const {
     isSelectMode,
     setIsSelectMode,
     selectedMessageIds,
     setSelectedMessageIds,
+    setSelectedMsg,
     setIsShowMode,
     isActive,
     setShowPicker,
-  } = useMessagesContext();
+    setting,
+  } = useAppContext();
 
   const { messages, loading, sending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
   const [DeleteModel, setDeleteModel] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null); // reply state
+  const [imageTo, setimageTo] = useState(null);
   const [text, setText] = useState("");
   const inputRef = useRef(null); // focus input when reply is set
-  const bottomRef = useRef(null);
+  const bottomRef = useRef(null); // for go to bottom
+  const chatContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const plusiconRef = useRef(null);// reference of the plus icon 
+  const uploadBarRef = useRef(null)// reference of the uploadBar
+  const [keyboardHeight, setKeyboardHeight] = useState(0); // find visual keyboard height it is very important
+  const [showScrollBottom, setShowScrollBottom] = useState(false); // for go to bottom with an icon
+  const [openFileAction, setopenFileAction] = useState(false); //show the upload action bar on chat window
 
 
 
+  // find orignal height when keyboard open
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
@@ -56,24 +69,144 @@ const ChatWindow = () => {
     };
   }, []);
 
-  // Auto scroll to bottom on new messages / typing indicator
+  // Detect scroll position
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+
+    const container = chatContainerRef.current;
+
+    if (!container) return;
+
+    const handleScroll = () => {
+
+      const isNearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 300;
+
+      setShowScrollBottom(!isNearBottom);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+
+  }, []);
+
+  // ── Click-outside: action bar ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!openFileAction) return;
+
+    const onDown = (e) => {
+      const clickedInsideMenu = uploadBarRef.current?.contains(e.target);
+      const clickedInsideButton = plusiconRef.current?.contains(e.target);
+
+      // If the click is outside both elements, reset the state
+      if (!clickedInsideMenu && !clickedInsideButton) {
+        setopenFileAction(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openFileAction]);
+
+
+  // Auto scroll to bottom on new messages / typing indicator , typing
+  useEffect(() => {
+
+    if (bottomRef.current) {
+      // 1. Get the position of your bottom element relative to the screen
+      const rect = bottomRef.current.getBoundingClientRect();
+
+      // 2. Check if the bottom element is already visible in the viewport
+      // We add a 50px buffer zone for safety
+      const isAtBottom = rect.top <= window.innerHeight + 50;
+
+      // 3. Only scroll down if it's NOT already visible on screen
+      if (!isAtBottom) {
+        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [messages, isTyping, text]);
+
+  const scrollToBottom = () => {
+
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  };
+
+  // const uploadImage = async (formData) => {
+  //   console.log("file uploaded");
+  //   setimageTo(false);
+
+  //   try {
+  //     setLoading(true);
+  //     const res = await api.post("/api/upload-profile", formData);
+  //     const data = res.data;
+  //     console.log(data);
+
+  //     setimageTo(data.imageUrl);
+
+  //     console.log("image",imageTo)
+
+  //   } catch (err) {
+  //     toast.error("Upload failed!");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if ((!text.trim() && !imageTo) || sending) return;
+    if (imageTo && imageTo.formData) {
+      await uploadImage(imageTo.formData);
+    }
     clearTimeout(typingTimeoutRef.current);
     emitStopTyping();
     await sendMessage(text, isActive, replyingTo ? { _id: replyingTo._id, text: replyingTo.text } : null);
     setText("");
+
     setReplyingTo(null); // clear reply after send
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+    autoResizeTextarea();
+
+  };
+
+  const autoResizeTextarea = () => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    // 1. Check if empty or whitespace-only: reset to default instantly
+    if (!textarea.value.trim()) {
+      textarea.style.height = "auto";
+      textarea.style.overflowY = "hidden";
+      return; // Stop execution early
+    }
+
+    // 2. Reset height to calculate expansion accurately
+    textarea.style.height = "auto";
+
+    // 3. Set height to scrollHeight
+    textarea.style.height = textarea.scrollHeight + "px";
+    textarea.style.maxHeight = "300px";
+
+    // 4. Toggle scrollbar visibility strictly at the 300px ceiling limit
+    if (textarea.scrollHeight > 300) {
+      textarea.style.overflowY = "auto";
+    } else {
+      textarea.style.overflowY = "hidden";
+    }
   };
 
   const handleTyping = useCallback((e) => {
     setText(e.target.value);
+    autoResizeTextarea();
     emitTyping();
     clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => emitStopTyping(), 2000);
@@ -99,17 +232,18 @@ const ChatWindow = () => {
   const handleCancelSelectMode = () => {
     setIsSelectMode(false);
     setSelectedMessageIds([]);
-    console.log("Select mode cancelled");
+    setSelectedMsg([]);
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = async (deleteforme) => {
     console.log("Selected Message IDs", selectedMessageIds);
     setIsSelectMode(false);
     setDeleteModel(false);
     try {
-      await deleteMessages(selectedMessageIds);
+      await deleteMessages(selectedMessageIds, deleteforme);
       console.log("Messages deleted successfully");
       setSelectedMessageIds([]);
+      setSelectedMsg([]);
       if (typeof setIsShowMode === "function") setIsShowMode(false);
     } catch (error) {
       console.error("Failed to delete messages:", error);
@@ -119,18 +253,7 @@ const ChatWindow = () => {
   };
 
 
-  // const handleDeleteforMe = async () =>
-  // {
-  //   setIsSelectMode(false);
-  //   setDeleteModel(false);
-  //   try{
-  //     await deleteMsgForMe(selectedMessageIds);
-  //     setSelectedMessageIds([]);
-  //   }catch(err)
-  //   {
-  //     console.log("Failed to delete messages:",err);
-  //   }
-  // }
+
 
   const handleEmojiClick = async (messageId, emoji) => {
 
@@ -154,201 +277,145 @@ const ChatWindow = () => {
 
 
   // No user selected — only visible on desktop (parent hides this on mobile)
-  if (!selectedUser) {
+if (!selectedUser || setting) {
     return (
-      <div className={` flex-1 flex items-center h-screen justify-center bg-chat-panel`}>
-        <div className="text-center">
-          <div className="w-24 h-24 rounded-3xl bg-chat-panel border border-chat-border flex items-center justify-center mx-auto mb-6 shadow-2xl">
-            <svg className="w-12 h-12 text-chat-accent opacity-60" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.02-1.35C8.47 21.52 10.19 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" />
-            </svg>
-          </div>
-          <h2 className="text-xl text-chat-text mb-2 font-bold">Welcome to TalkApp</h2>
-          <p className="text-chat-muted text-sm max-w-xs talkapp-font font-medium">
-            Select a contact from the sidebar to start a conversation
-          </p>
+        <div className="flex-1 flex items-center h-screen justify-center bg-chat-panel" >
+            <div className="text-center">
+                <div className="w-24 h-24 rounded-3xl bg-chat-panel border border-chat-border flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                    <svg className="w-12 h-12 text-chat-accent opacity-60" fill="currentColor" viewBox="0 0 24 24">
+                        <title>TalkApp Logo</title>
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.02-1.35C8.47 21.52 10.19 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" />
+                    </svg>
+                </div>
+                <h2 className="text-xl text-chat-text mb-2 font-bold">Welcome to TalkApp</h2>
+                <p className="text-chat-muted text-sm max-w-xs talkapp-font font-medium">
+                    {setting 
+                        ? "Manage your account settings and profile details" 
+                        : "Select a contact from the sidebar to start a conversation"
+                    }
+                </p>
+            </div>
         </div>
-      </div>
     );
-  }
+}
 
 
-  // ── Delete Confirm Popup ────────────────────────────────────────────────
-  function DeleteMessagePopup({ open, onClose, onDelete }) {
-
-    const option = [
-      {
-        label: "Delete for me",
-        // Light red/orange gradient
-        style: "bg-linear-to-r from-red-500 to-rose-500 text-white border-transparent",
-        onClick: () => handleDeleteForMe(currentMessageId)
-      },
-      {
-        label: "Delete for Everyone",
-        // Deep red/crimson gradient (stands out more)
-        style: "bg-linear-to-r from-red-600 to-rose-700 text-white border-transparent",
-        onClick: () => handleDeleteSelected()
-      },
-      {
-        label: "Cancel",
-        // Neutral zinc look
-        style: "bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200",
-        onClick: () => setDeleteModel(false)
-      }
-    ];
-
-    return (
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-md p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0, y: 40 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: 40 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="relative w-full max-w-sm overflow-hidden rounded-4xl bg-white shadow-[0_20px_80px_rgba(0,0,0,0.18)]"
-            >
-              <div className="absolute -top-16 -right-10 h-40 w-40 rounded-full bg-red-100 blur-3xl" />
-
-              <motion.button
-                whileHover={{ rotate: 90, scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                onClick={onClose}
-                className="absolute top-4 right-4 z-50 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-zinc-100 text-zinc-500 shadow-s transition-colors hover:bg-zinc-200 active:bg-zinc-300 focus:outline-none"
-              >
-                <X size={18} strokeWidth={2.5} />
-              </motion.button>
-
-              <div className="relative z-10 px-7 pb-7 pt-10">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.15, type: "spring", stiffness: 300 }}
-                  className="mx-auto flex h-15 w-15 items-center justify-center"
-                >
-                  <motion.div
-                    animate={{ rotate: [0, -10, 10, -5, 0] }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                  >
-                    <Trash2 className="h-7 w-7 text-red-500" />
-                  </motion.div>
-                </motion.div>
-
-                <div className="mt-6 text-center">
-                  <h2 className="text-2xl font-bold tracking-tight text-zinc-900">
-                    Delete message?
-                  </h2>
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-500">
-                    This message will be permanently removed from your
-                    conversation history.
-                  </p>
-                </div>
-
-                <div className="mt-8 flex flex-col gap-3">
-
-                  {
-                    option.map((opt, index) => (
-                      <motion.button
-                        key={index}
-                        // 1. Scale up slightly on hover and loop the brightness/opacity for a pulse effect
-                        whileHover={{
-                          scale: 1.03,
-                          transition: { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
-                        }}
-                        // 2. Scale down slightly when clicked
-                        whileTap={{ scale: 0.96 }}
-                        onClick={opt.onClick}
-                        className={`${opt.style} md:opacity-70 flex-1 cursor-pointer rounded-full border py-3 text-sm font-semibold transition-all shadow-sm hover:opacity-100`}
-                      >
-                        {opt.label}
-                      </motion.button>
-                    ))
-                  }
 
 
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    );
-  }
 
 
   return (
 
-    <div className={`flex flex-col w-full h-dvh overflow-hidden bg-chat-bg`}>
+    <div className={`relative flex flex-col w-full h-dvh overflow-hidden bg-chat-bg`}  >
       {/* ── HEADER — never moves ── */}
-      <div className={`fixed top-0 w-full shrink-0 ${DeleteModel ? "z-0" : "z-99"} bg-white`}>
+      <div className={`absolute top-0 inset-x-0 ${DeleteModel ? "z-0" : "z-99"} bg-white`}>
         <ChatHeader />
       </div>
 
       {/* ── MESSAGES — scrollable, fills remaining space ── */}
       <main
-        className="flex-1 w-full overflow-y-auto overflow-x-hidden custom-scrollbar"
+        ref={chatContainerRef}
+        className="relative flex-1 w-full px-4 overflow-y-auto overflow-x-hidden custom-scrollbar"
         style={{
           paddingTop: "120px",
           paddingBottom: `${keyboardHeight + 80}px`,  // ✅ adjusts when keyboard opens
           transition: 'paddingBottom 0.2s ease'
         }}>
 
-        <div className="w-full px-4 lg:px-6 ">
+        <div className="w-full px-4 lg:px-6 relative">
           <TalkAppWallpaper />
-
-          {loading ? (
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
-                <p className="mt-4 font-medium text-black">Loading Messages...</p>
-              </div>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-              <div className="w-16 h-16 rounded-2xl bg-chat-panel border border-chat-border flex items-center justify-center mb-4">
-                <svg
-                  className="w-8 h-8 text-chat-muted"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </div>
-              <p className="text-chat-muted text-sm">No messages yet.</p>
-              <p className="text-chat-muted text-xs mt-1">
-                Say hello to {selectedUser.name}! 👋
-              </p>
-            </div>
-          ) : (
-            <>
-              {messages?.map((msg) => (
-                <MessageBubble
-                  key={msg._id}
-                  message={msg}
-                  onEmojiClick={handleEmojiClick}
-                  onReply={handleReply}
-                  replyingTo={replyingTo}
-                />
-              ))}
-              {isTyping && <TypingIndicator />}
-            </>
-          )}
-
-          <div ref={bottomRef} />
         </div>
+
+
+
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
+              <p className="mt-4 font-medium text-black">Loading Messages...</p>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+            <div className="w-16 h-16 rounded-2xl bg-chat-panel border border-chat-border flex items-center justify-center mb-4">
+              <svg
+                className="w-8 h-8 text-chat-muted"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+            </div>
+            <p className="text-chat-muted text-sm">No messages yet.</p>
+            <p className="text-chat-muted text-xs mt-1">
+              Say hello to {selectedUser.name}! 👋
+            </p>
+          </div>
+        ) : (
+          <>
+            {messages?.map((msg) => (
+              <MessageBubble
+                key={msg._id}
+                message={msg}
+                onEmojiClick={handleEmojiClick}
+                onReply={handleReply}
+                replyingTo={replyingTo}
+              />
+            ))}
+            {isTyping && <TypingIndicator />}
+          </>
+        )}
+
+        {showScrollBottom && (
+          <div className="sticky bottom-0 flex justify-center z-50">
+
+            <button
+              onClick={scrollToBottom}
+              className="
+    animate-bounce
+    cursor-pointer
+    flex
+    items-center
+    justify-center
+    w-12
+    h-12
+    rounded-full
+    bg-white/90
+    backdrop-blur-xl
+    text-gray-700
+    border
+    border-white/40
+    shadow-lg
+    hover:scale-110
+    active:scale-95
+    transition-all
+    duration-300
+  "
+            >
+              <ArrowDown size={20} />
+            </button>
+
+          </div>
+        )}
+
+        <div ref={bottomRef} />
       </main>
+
+      <UploadBar
+        value={{
+          open: openFileAction,
+          uploadBarRef: uploadBarRef,
+          imageTo: imageTo,
+          setimageTo: setimageTo,
+          setopenFileAction: setopenFileAction
+        }}
+      />
 
       {/* ── FOOTER — sticky at visual bottom, never moves ── */}
       <footer
@@ -359,7 +426,6 @@ const ChatWindow = () => {
         }}
 
       >
-
         <form
           onSubmit={handleSend}
           className="flex flex-col items-center gap-0 bg-white border border-chat-border rounded-3xl p-2 md:p-3 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-md"
@@ -367,15 +433,34 @@ const ChatWindow = () => {
           {!isSelectMode ? (
             <>
               {/* Reply Preview  */}
-              <div className={`${replyingTo ? "block w-full" : "hidden"}`}>
+              <div className={`${replyingTo || imageTo ? "block w-full" : "hidden"}`}>
                 <ReplyPreview
                   replyingTo={replyingTo}
-                  onCancel={() => setReplyingTo(null)}
+                  imageTo={imageTo}
+                  onReplyCancel={() => setReplyingTo(null)}
+                  onImgCancel={() => setimageTo(null)}
                 />
               </div>
 
               {/* input field */}
-              <div className="flex items-center justify-center w-full">
+              <form
+                onSubmit={handleSend}
+                className="relative flex items-center justify-center w-full"
+              >
+                <button
+                  ref={plusiconRef}
+                  type="button"
+                  onClick={() => { setopenFileAction(!openFileAction); }}
+                  className="cursor-pointer group relative flex items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-blue-500 text-white"
+                >
+                  <PlusIcon
+                    className={` transition-transform duration-300 ease-in-out  ${openFileAction ? "rotate-45" : "rotate-0"}`}
+                  />                  {/* Hover Text */}
+                  <span className={`absolute left-2 bottom-7  ${openFileAction ? "invisible opacity-0" : "invisible opacity-0 group-hover:opacity-100 group-hover:visible"} transition-all duration-300 px-4 py-2 rounded-full bg-linear-to-r from-cyan-500 to-blue-500 text-white text-sm whitespace-nowrap shadow-lg`}>
+                    Add files and more...
+                  </span>
+                </button>
+
                 <textarea
                   rows={1}
                   autoComplete="off"
@@ -385,87 +470,45 @@ const ChatWindow = () => {
                   onKeyDown={handleKeyDown}
                   placeholder={`Message to ${selectedUser.name}...`}
                   maxLength={2000}
-                  className="w-full bg-transparent focus:ring-0 focus:outline-none px-3 text-chat-text placeholder-chat-muted text-sm"
+                  className="w-full resize-none bg-transparent focus:ring-0 focus:outline-none px-3 text-chat-text placeholder-chat-muted text-sm"
                 />
+
                 {text.length > 1800 && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-chat-muted">
+                  <span className="absolute right-16 top-1/2 -translate-y-1/2 text-xs text-chat-muted">
                     {2000 - text.length}
                   </span>
                 )}
 
                 <button
                   type="submit"
-                  disabled={!text.trim() || sending}
+                  // ENABLES IF: there is text OR there is an image, AND we aren't currently sending
+                  disabled={(!text.trim() && !imageTo) || sending}
                   className="w-10 h-10 rounded-2xl bg-chat-accent hover:bg-chat-accent-light flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:bg-transparent disabled:text-chat-muted text-white shrink-0"
                 >
                   {sending ? (
-                    <svg
-                      className="animate-spin w-5 h-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z"
-                      />
+                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.37 0 0 5.37 0 12h4z" />
                     </svg>
                   ) : (
-                    <svg
-                      className="w-5 h-5 translate-x-0.5"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="w-5 h-5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                     </svg>
                   )}
                 </button>
-
-              </div>
+              </form>
 
 
             </>
           ) : (
-            <div className="flex items-center gap-4 w-full px-4 py-1.5 animate-fade-in">
-              <button
-                type="button"
-                onClick={handleCancelSelectMode}
-                className="text-sm font-medium text-gray-500 hover:text-gray-800 cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">
-                  {selectedMessageIds.length}{" "}
-                  {selectedMessageIds.length === 1 ? "message" : "messages"}{" "}
-                  selected
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setDeleteModel(true)}
-                  disabled={selectedMessageIds.length === 0}
-                  className={`p-2 rounded-xl transition-all duration-150 cursor-pointer ${selectedMessageIds.length > 0
-                    ? "text-red-500 hover:bg-red-50 active:bg-red-100"
-                    : "text-gray-300 cursor-not-allowed"
-                    }`}
-                  title="Delete Selected"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                    <path d="M7 21C6.45 21 5.97917 20.8042 5.5875 20.4125C5.19583 20.0208 5 19.55 5 19V6H4V4H9C9 3.45 9.45 3 10 3H14C14.55 3 15 3.45 15 4H20V6H19V19C19 19.55 18.8042 20.0208 18.4125 20.4125C18.0208 20.8042 17.55 21 17 21H7ZM17 6H7V19H17V6ZM10 17H12V9H10V17ZM14 17H16V9H14V17Z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+            <DeleteAction
+              value={
+                {
+                  handleCancelSelectMode: handleCancelSelectMode,
+                  DeleteModel: () => setDeleteModel(true)
+                }
+              }
+            />
           )}
         </form>
 
@@ -473,10 +516,20 @@ const ChatWindow = () => {
       </footer>
 
       <DeleteMessagePopup
-        open={DeleteModel}
-        onClose={() => setDeleteModel(false)}
-        onDelete={handleDeleteSelected}
+        value=
+        {{
+          open: DeleteModel,
+          onClose: () => setDeleteModel(false),
+          onDelete: handleDeleteSelected
+
+        }}
+
       />
+
+
+
+
+
     </div>
   );
 };

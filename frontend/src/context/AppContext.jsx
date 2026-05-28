@@ -1,16 +1,24 @@
 import React, { createContext, useContext, useState } from "react";
 
 
-export const MessagesContext = createContext();
+export const AppContext = createContext();
 
-export const MessagesProvider = ({ children }) => {
+export const AppContextProvider = ({ children }) => {
     const [isShowMode, setIsShowMode] = useState(false);
     const [showPicker, setShowPicker] = useState(null);
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [selectedMessageIds, setSelectedMessageIds] = useState([]); //['6a0d66f3cbe8efb3edcb28cd', '6a0d5465cbe8efb3edcb27a1']
-    console.log(selectedMessageIds);
+    console.log("selected Messages Ids", selectedMessageIds);
     const [isActive, setIsActive] = useState(false);
+    const [uploadFile, setUploadFile] = useState(false);
+    const [selectedMsg, setSelectedMsg] = useState([]);
+    const [setting, setSetting] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
+
+
+
+    // App Components
 
 
 
@@ -25,17 +33,26 @@ export const MessagesProvider = ({ children }) => {
         setIsActive,
         showPicker,
         setShowPicker,
+        selectedMsg,
+        setSelectedMsg,
+        setting,
+        setSetting,
+        isLogoutModalOpen,
+        setIsLogoutModalOpen
     };
 
+
+
+
     return (
-        <MessagesContext.Provider value={value}>
+        <AppContext.Provider value={value}>
             {children}
-        </MessagesContext.Provider>
+        </AppContext.Provider>
     );
 }
 
-export const useMessagesContext = () => {
-    const ctx = useContext(MessagesContext);
+export const useAppContext = () => {
+    const ctx = useContext(AppContext);
     if (!ctx) throw new Error("useMessages must be used within MessagesProvider");
     return ctx;
 };

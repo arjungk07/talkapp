@@ -56,6 +56,8 @@ html, body {
   }
 }
 
+
+
 .animate-spin-slow {
   animation: spinSlow 3s linear infinite;
 }

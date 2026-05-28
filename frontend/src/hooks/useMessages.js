@@ -116,7 +116,7 @@ export const useMessages = (selectedUser) => {
   }, [socket, selectedUser]);
 
   // Message send
-  const sendMessage = async (text, isActive , replyingTo) => {
+  const sendMessage = async (text, isActive, replyingTo) => {
     if (!text.trim() || !selectedUser || sending) return;
 
     setSending(true);
@@ -125,7 +125,7 @@ export const useMessages = (selectedUser) => {
         receiverId: selectedUser._id,
         text: text.trim(),
         isActive: isActive,
-        replyingTo:replyingTo
+        replyingTo: replyingTo
       });
 
       console.log("Data from API:", data);
@@ -177,27 +177,32 @@ export const useMessages = (selectedUser) => {
     }
   };
 
-   // delete for everyone and also delete in db
-  const deleteMessages = async (selectedMessageIds) => {
+  // delete for everyone and also delete in db
+  const deleteMessages = async (selectedMessageIds, deleteforme) => {
     if (!socket || !selectedUser || !selectedMessageIds || !Array.isArray(selectedMessageIds) || selectedMessageIds.length === 0) return;
 
     try {
-      console.log("Selected Message IDs to delete:", selectedMessageIds);
 
       // Pass the array inside the data config option for DELETE requests
-      await api.delete('/api/messages/deletemessages', { data: { messageIds: selectedMessageIds } });
-      console.log("Messages deleted successfully from backend");
+      const { data } = await api.delete('/api/messages/deletemessages', { data: { messageIds: selectedMessageIds, deleteforme: deleteforme } });
+      console.log("Messages deleted successfully from backend", data);
 
       // Remove messages from local state (UI)
       setMessages((prev) => prev.filter((msg) => !selectedMessageIds.includes(msg._id)));
 
-      // Emit socket event so the other user also removes them immediately
-      socket.emit("deleteMessages", {
-        messageIds: selectedMessageIds,
-        receiverId: selectedUser._id,
-      });
+      if (data.deleteforme != user._id || data.deleteforme === null) {
 
-      console.log("Delete event emitted via socket");
+
+        // Emit socket event so the other user also removes them immediately
+        socket.emit("deleteMessages", {
+          messageIds: selectedMessageIds,
+          receiverId: selectedUser._id,
+        });
+
+        console.log("Delete event emitted via socket");
+      }
+
+
     } catch (err) {
       console.error("Error deleting messages:", err.response?.data?.message || err.message);
     }

@@ -14,28 +14,82 @@ const generateToken = (id) => {
 // @access  Public
 export const register = async (req, res) => {
   try {
-    const { email, name, username, password } = req.body;
+    const { email, name, username, password, newname } = req.body;
 
-    if (!email || !name || !username || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+    // 1. Check if newname is provided but empty/just spaces
+    if (newname !== undefined && newname.trim() === "") {
+      return res.status(400).json({ message: "New name cannot be empty" });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    // 2. Adjust core validation: 
+    // If 'newname' exists, we only strictly need the 'email' to find the user.
+    // If 'newname' DOES NOT exist, it's a standard registration, so ALL fields are required.
+    if (!newname) {
+      if (!email || !name || !username || !password) {
+        return res.status(400).json({ message: "All fields are required for registration" });
+      }
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+    } else {
+      // If updating, we still need at least the email to look them up
+      if (!email) {
+        return res.status(400).json({ message: "Email is required to update name" });
+      }
     }
 
-    const emailExists = await User.findOne({ email });
-    if (emailExists) {
-      return res.status(400).json({ message: "User already exists with this email" });
+    // 3. Check if the user already exists by email or username
+    let user = await User.findOne({
+      $or: [
+        { email: email },
+        { username: username }
+      ]
+    });
+
+
+
+    // 4. If newname is provided and the user exists, update their name
+    if (newname && user) {
+      const trimmedNewName = newname.trim();
+      console.log("Processing name update to:", trimmedNewName);
+
+      // Scenario A: The name is identical to what's already in the database
+      if (user.name === trimmedNewName) {
+        return res.status(200).json({
+          status: "success",
+          message: "No changes detected; profile name is already up to date.",
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+        });
+      }
+
+      // Scenario B: The name is different, proceed with update and save
+      user.name = trimmedNewName;
+      await user.save();
+
+      const token = generateToken(user._id);
+      return res.status(200).json({
+        status: "success",
+        message: "User profile updated successfully.",
+        _id: user._id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        token,
+      });
     }
 
-    const usernameExists = await User.findOne({ username });
-    if (usernameExists) {
-      return res.status(400).json({ message: "User already exists with this username" });
+
+
+    // 5. Standard validation if the user exists but no 'newname' was provided (Registration attempt)
+    if (user) {
+      return res.status(400).json({ message: "User already exists with this email or username" });
     }
 
-    // ✅ Don't hash here — the model's pre("save") hook handles it
-    const user = await User.create({ name, username, email, password });
+    // 6. Create new user if they don't exist
+    user = await User.create({ name, username, email, password });
 
     const token = generateToken(user._id);
 
@@ -48,9 +102,8 @@ export const register = async (req, res) => {
     });
 
   } catch (error) {
-    // ✅ Handle duplicate email (race condition between findOne and create)
     if (error.code === 11000) {
-      return res.status(400).json({ message: "User already exists with this email" });
+      return res.status(400).json({ message: "User already exists with this credential" });
     }
 
     console.error("Register error:", error);

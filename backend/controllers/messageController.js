@@ -13,11 +13,18 @@ const getMessages = async (req, res) => {
 
     // 1. Fetch messages between me and the other user/bot
     const messages = await Message.find({
+
       $or: [
         { senderId: myId, receiverId: userId },
         { senderId: userId, receiverId: myId },
       ],
+
+      deleteforme: {
+        $ne: myId
+      }
+
     }).sort({ createdAt: 1 });
+
 
     // 2. Safety Check: If messages is null/undefined, send empty array
     if (!messages) {
@@ -29,6 +36,8 @@ const getMessages = async (req, res) => {
       { senderId: userId, receiverId: myId, read: false },
       { $set: { read: true, isAi: true } }
     );
+
+
 
     res.json(messages);
   } catch (error) {
@@ -44,7 +53,7 @@ const getMessages = async (req, res) => {
 
 const sendMessage = async (req, res) => {
   try {
-    const { receiverId, text, isActive , replyingTo } = req.body;
+    const { receiverId, text, isActive, replyingTo } = req.body;
     const senderId = req.user._id;
 
 
@@ -62,7 +71,7 @@ const sendMessage = async (req, res) => {
       text: text.trim(),
       replyingTo: replyingTo ? {
         _id: replyingTo._id,
-        userId:senderId,
+        userId: senderId,
         text: replyingTo.text,
       } : null,
     });
@@ -161,37 +170,55 @@ const getUnreadCounts = async (req, res) => {
 
 const deleteMessages = async (req, res) => {
   try {
-    const { messageIds } = req.body;
-  
 
-    // Validation Guard Checks
-    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
-      return res.status(400).json({ message: "Invalid or empty message IDs array provided" });
+    const { messageIds, deleteforme } = req.body;
+    const userId = req.user._id;
+
+    if (!messageIds || !Array.isArray(messageIds)) {
+      return res.status(400).json({
+        message: "Invalid message ids"
+      });
     }
 
-    /**
-     * Deletes multiple records matching the target IDs array.
-     * Optional Security Layer: Enforce that the senderId matches the authenticated requester
-     * so users cannot arbitrarily delete someone else's message via API manipulation.
-     */
+    // DELETE FOR ME
+    if (deleteforme) {
+
+      const result = await Message.updateMany(
+        {
+          _id: { $in: messageIds }
+        },
+        {
+          $addToSet: {
+            deleteforme: userId
+          }
+        }
+      );
+
+      console.log(result);
+
+
+      return res.status(200).json({
+        message: "Messages deleted for you",
+        deleteforme :userId
+      });
+    }
+
+    // DELETE FOR EVERYONE
     const result = await Message.deleteMany({
       _id: { $in: messageIds },
+      senderId: userId
     });
 
-    console.log(result);
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ message: "No messages found or you are unauthorized to delete them" });
-    }
-
     return res.status(200).json({
-      message: `${result.deletedCount} messages deleted successfully`,
-      deletedCount: result.deletedCount 
+      message: "Messages deleted for everyone",
+      deletedCount: result.deletedCount
     });
 
   } catch (error) {
-    console.error("Error in deleteMessagesBatch controller:", error.message);
-    return res.status(500).json({ message: "Internal server error during batch deletion" });
+    console.log(error);
+    return res.status(500).json({
+      message: "Server error"
+    });
   }
 };
 
@@ -203,7 +230,7 @@ const addMessageReaction = async (req, res) => {
     const userId = req.user._id; // Extracted from your authentication middleware
 
     const message = await Message.findById(messageId);
-    
+
     if (!message) return res.status(404).json({ message: "Message not found" });
 
     // Check if user already reacted to this message

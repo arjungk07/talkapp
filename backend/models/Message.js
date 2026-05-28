@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import User from "./User.js";
 
 const messageSchema = new mongoose.Schema(
   {
@@ -18,6 +19,26 @@ const messageSchema = new mongoose.Schema(
       trim: true,
       maxlength: [2000, "Message cannot exceed 2000 characters"],
     },
+    attachments: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        fileType: {
+          type: String,
+          enum: ["image", "video", "document"],
+          default: "image",
+        },
+        publicId: {
+          type: String, // Useful if you plan to delete files later from Cloudinary/S3
+        }
+      }
+    ],
+    deleteforme:[{
+      type : mongoose.Schema.Types.ObjectId,
+      ref:'User'
+    }],
    replyingTo: {
       _id: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
       userId : {type : mongoose.Schema.Types.ObjectId, ref: 'User' }, 
