@@ -23,7 +23,7 @@ const Home = () => {
   // Fetch initial contacts before showing the dashboard layout
   const fetchInitialData = useCallback(async () => {
     try {
-      const { data } = await api.get(`/api/users`, {
+      const { data } = await api.get('/api/users', {
         params: { page: 1, limit: 20, search: "" }
       });
       setInitialUsers(data);
@@ -49,7 +49,10 @@ const Home = () => {
 
   // Show a full-page loader until backend data resolves successfully
   if (appLoading) {
-    return <LoadingScreen />;
+    return <LoadingScreen
+      initialLoading={appLoading}
+      usersCount={initialUsers.length}
+    />;
   }
 
   return (
@@ -59,13 +62,13 @@ const Home = () => {
       {
         !setting && <WhatsAppHeader className={`${selectedUser ? "hidden" : ""}`} />
       }
-      
-      
+
+
       {setting ? (
         <Setting />
       ) : (
-        <Sidebar 
-          className={`${selectedUser ? "hidden md:flex md:flex-col" : ""} `} 
+        <Sidebar
+          className={`${selectedUser ? "hidden md:flex md:flex-col" : ""} `}
           preloadedUsers={initialUsers}
         />
       )}
@@ -73,7 +76,7 @@ const Home = () => {
       {isLogoutModalOpen && (
         <LogOut isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} />
       )}
-      
+
       <ChatWindow />
     </div>
   );

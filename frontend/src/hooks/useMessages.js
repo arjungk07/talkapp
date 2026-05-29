@@ -227,6 +227,7 @@ export const useMessages = (selectedUser) => {
     messages,
     loading,
     sending,
+    setSending,
     isTyping,
     setMessages,
     sendMessage,

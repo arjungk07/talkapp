@@ -30,7 +30,7 @@ const ChatWindow = () => {
     setting,
   } = useAppContext();
 
-  const { messages, loading, sending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
+  const { messages, loading, sending, setSending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
   const [DeleteModel, setDeleteModel] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null); // reply state
   const [imageTo, setimageTo] = useState(null);
@@ -159,23 +159,41 @@ const ChatWindow = () => {
 
 
   const handleSend = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+
+    // FIX: Return early if there is no content OR if we are ALREADY sending
     if ((!text.trim() && !imageTo) || sending) return;
-    if (imageTo && imageTo.formData) {
-      await uploadImage(imageTo.formData);
+
+    try {
+      setSending(true);
+
+      if (imageTo && imageTo.formData) {
+        await uploadImage(imageTo.formData);
+      }
+
+      clearTimeout(typingTimeoutRef.current);
+      emitStopTyping();
+
+      await sendMessage(
+        text,
+        isActive,
+        replyingTo ? { _id: replyingTo._id, text: replyingTo.text } : null
+      );
+
+      // Clear inputs and states on success
+      setText("");
+      setReplyingTo(null);
+
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+      autoResizeTextarea();
+
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    } finally {
+      setSending(false);
     }
-    clearTimeout(typingTimeoutRef.current);
-    emitStopTyping();
-    await sendMessage(text, isActive, replyingTo ? { _id: replyingTo._id, text: replyingTo.text } : null);
-    setText("");
-
-    setReplyingTo(null); // clear reply after send
-
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
-    autoResizeTextarea();
-
   };
 
   const autoResizeTextarea = () => {
@@ -213,9 +231,12 @@ const ChatWindow = () => {
   }, [emitTyping, emitStopTyping]);
 
   const handleKeyDown = (e) => {
+    // If the user presses Enter without holding Shift, send the message
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(e);
+      e.preventDefault(); // Stop a fresh empty line from making a mess
+      if ((text.trim() || imageTo) && !sending) {
+        handleSend();
+      }
     }
   };
 
@@ -277,27 +298,27 @@ const ChatWindow = () => {
 
 
   // No user selected — only visible on desktop (parent hides this on mobile)
-if (!selectedUser || setting) {
+  if (!selectedUser || setting) {
     return (
-        <div className="flex-1 flex items-center h-screen justify-center bg-chat-panel" >
-            <div className="text-center">
-                <div className="w-24 h-24 rounded-3xl bg-chat-panel border border-chat-border flex items-center justify-center mx-auto mb-6 shadow-2xl">
-                    <svg className="w-12 h-12 text-chat-accent opacity-60" fill="currentColor" viewBox="0 0 24 24">
-                        <title>TalkApp Logo</title>
-                        <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.02-1.35C8.47 21.52 10.19 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" />
-                    </svg>
-                </div>
-                <h2 className="text-xl text-chat-text mb-2 font-bold">Welcome to TalkApp</h2>
-                <p className="text-chat-muted text-sm max-w-xs talkapp-font font-medium">
-                    {setting 
-                        ? "Manage your account settings and profile details" 
-                        : "Select a contact from the sidebar to start a conversation"
-                    }
-                </p>
-            </div>
+      <div className="flex-1 flex items-center h-screen justify-center bg-chat-panel" >
+        <div className="text-center">
+          <div className="w-24 h-24 rounded-3xl bg-chat-panel border border-chat-border flex items-center justify-center mx-auto mb-6 shadow-2xl">
+            <svg className="w-12 h-12 text-chat-accent opacity-60" fill="currentColor" viewBox="0 0 24 24">
+              <title>TalkApp Logo</title>
+              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.07L2 22l5.02-1.35C8.47 21.52 10.19 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" />
+            </svg>
+          </div>
+          <h2 className="text-xl text-chat-text mb-2 font-bold">Welcome to TalkApp</h2>
+          <p className="text-chat-muted text-sm max-w-xs talkapp-font font-medium">
+            {setting
+              ? "Manage your account settings and profile details"
+              : "Select a contact from the sidebar to start a conversation"
+            }
+          </p>
         </div>
+      </div>
     );
-}
+  }
 
 
 
@@ -442,11 +463,8 @@ if (!selectedUser || setting) {
                 />
               </div>
 
-              {/* input field */}
-              <form
-                onSubmit={handleSend}
-                className="relative flex items-center justify-center w-full"
-              >
+              {/* FIXED: Changed from <form> to <div> */}
+              <div className="relative flex items-center justify-center w-full">
                 <button
                   ref={plusiconRef}
                   type="button"
@@ -454,9 +472,10 @@ if (!selectedUser || setting) {
                   className="cursor-pointer group relative flex items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-blue-500 text-white"
                 >
                   <PlusIcon
-                    className={` transition-transform duration-300 ease-in-out  ${openFileAction ? "rotate-45" : "rotate-0"}`}
-                  />                  {/* Hover Text */}
-                  <span className={`absolute left-2 bottom-7  ${openFileAction ? "invisible opacity-0" : "invisible opacity-0 group-hover:opacity-100 group-hover:visible"} transition-all duration-300 px-4 py-2 rounded-full bg-linear-to-r from-cyan-500 to-blue-500 text-white text-sm whitespace-nowrap shadow-lg`}>
+                    className={`transition-transform duration-300 ease-in-out ${openFileAction ? "rotate-45" : "rotate-0"}`}
+                  />
+                  {/* Hover Text */}
+                  <span className={`absolute left-2 bottom-7 ${openFileAction ? "invisible opacity-0" : "invisible opacity-0 group-hover:opacity-100 group-hover:visible"} transition-all duration-300 px-4 py-2 rounded-full bg-linear-to-r from-cyan-500 to-blue-500 text-white text-sm whitespace-nowrap shadow-lg`}>
                     Add files and more...
                   </span>
                 </button>
@@ -479,11 +498,13 @@ if (!selectedUser || setting) {
                   </span>
                 )}
 
+                {/* CHANGED: type="submit" so it utilizes the primary form element handler */}
                 <button
                   type="submit"
-                  // ENABLES IF: there is text OR there is an image, AND we aren't currently sending
                   disabled={(!text.trim() && !imageTo) || sending}
-                  className="w-10 h-10 rounded-2xl bg-chat-accent hover:bg-chat-accent-light flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:bg-transparent disabled:text-chat-muted text-white shrink-0"
+                  className="relative z-50 w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 
+            bg-chat-accent hover:bg-chat-accent-light text-white
+            disabled:opacity-40 disabled:bg-chat-accent disabled:hover:bg-chat-accent disabled:cursor-not-allowed shrink-0"
                 >
                   {sending ? (
                     <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -496,18 +517,14 @@ if (!selectedUser || setting) {
                     </svg>
                   )}
                 </button>
-              </form>
-
-
+              </div> {/* FIXED: Changed from </form> to </div> */}
             </>
           ) : (
             <DeleteAction
-              value={
-                {
-                  handleCancelSelectMode: handleCancelSelectMode,
-                  DeleteModel: () => setDeleteModel(true)
-                }
-              }
+              value={{
+                handleCancelSelectMode: handleCancelSelectMode,
+                DeleteModel: () => setDeleteModel(true)
+              }}
             />
           )}
         </form>
