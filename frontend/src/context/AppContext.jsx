@@ -6,53 +6,33 @@ import { useAuth } from "./AuthContext";
 export const AppContext = createContext();
 
 export const AppContextProvider = ({ children }) => {
-
-    const { user } = useAuth();
-
-    const [isShowMode, setIsShowMode] = useState(false);
-    const [showPicker, setShowPicker] = useState(null);
-    const [isSelectMode, setIsSelectMode] = useState(false);
-    const [selectedMessageIds, setSelectedMessageIds] = useState([]); //['6a0d66f3cbe8efb3edcb28cd', '6a0d5465cbe8efb3edcb27a1']
-    const [isActive, setIsActive] = useState(false);
-    const [uploadFile, setUploadFile] = useState(false);
-    const [selectedMsg, setSelectedMsg] = useState([]);
-    const [setting, setSetting] = useState(false);
-    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-
-
+    const { user, socket } = useAuth(); // 👈 Pull the active socket connection here
 
     const [appLoading, setAppLoading] = useState(true);
-    const [initialUsers, setInitialUsers] = useState([]);
 
-    // 1. WATCH THE STATE CHANGE CORRECTLY
-    useEffect(() => {
-        console.log("Initial Users state updated:", initialUsers);
-    }, [initialUsers]);
+    // 1. One Singular State Chain for your list
+    const [users, setUsers] = useState([]);
 
-    // 2. FIXED FETCH FUNCTION (Now checks token first)
+    // 2. FIXED FETCH FUNCTION (Checks token first)
     const fetchInitialData = useCallback(async () => {
-        // 1. Get the raw string item from localStorage
         const item = window.localStorage.getItem("talkapp-user");
 
         try {
             let token = null;
-
-            // 2. Parse the item securely if it exists
             if (item) {
                 const parsedUser = JSON.parse(item);
-                token = parsedUser?.token; // Extract the nested token property safely
+                token = parsedUser?.token;
             }
 
-            // 3. 🔒 Check for token before hitting the network
             if (!token) {
-                console.log("No token found (Incognito/Logged out). Skipping API fetch.");
+                console.log("No token found. Skipping API fetch.");
                 setAppLoading(false);
-                return; // Exit early! Prevent the 401 request completely.
+                return;
             }
 
             const { data } = await api.get('/api/users');
             console.log("Data received from backend:", data);
-            setInitialUsers(data);
+            setUsers(data); // 👈 Directly populating the main state
         } catch (err) {
             if (err.response?.status === 401) {
                 console.log("Unauthorized request inside context. Stopping loop.");
@@ -64,23 +44,67 @@ export const AppContextProvider = ({ children }) => {
         } finally {
             setAppLoading(false);
         }
-    }, [user]);
+    }, []);
 
     // 3. TRIGGER IT ON GLOBAL MOUNT AND AUTH CHANGES
     useEffect(() => {
-        // If we don't have users yet, attempt to fetch them
-        if (initialUsers.length === 0) {
+        if (users.length === 0 && user) {
             fetchInitialData();
         }
 
-        // If a user logs out (user becomes null), reset the initial users list!
         if (!user) {
-            setInitialUsers([]);
+            setUsers([]); // Clear memory array instantly when current user logs out
         }
-    }, [fetchInitialData, user, initialUsers.length]); // <--- Added 'user' and length check here
+    }, [fetchInitialData, user, users.length]);
 
+    // Real time socket listener
+    useEffect(() => {
+        if (!socket) return;
 
+        // 1. Manage Global Profile Image Real-time Changes
+        const handleImageChange = (updatedData) => {
+            const { userId, profilePic } = updatedData;
+            setUsers((prevUsers) => {
+                if (!Array.isArray(prevUsers)) return [];
+                return prevUsers.map((user) =>
+                    String(user._id) === String(userId) ? { ...user, profilePic } : user
+                );
+            });
+        };
+
+        // 2. Manage Global Last Seen Updates
+        const handleLastSeenChange = (data) => {
+            const { userId, lastSeen } = data;
+            setUsers((prevUsers) => {
+                if (!Array.isArray(prevUsers)) return [];
+                return prevUsers.map((u) =>
+                    u._id === userId ? { ...u, lastSeen } : u
+                );
+            });
+        };
+
+        socket.on("user-image-updated", handleImageChange);
+        socket.on("userLastSeenUpdate", handleLastSeenChange);
+
+        return () => {
+            socket.off("user-image-updated", handleImageChange);
+            socket.off("userLastSeenUpdate", handleLastSeenChange);
+        };
+    }, [socket]);
+
+    const [isShowMode, setIsShowMode] = useState(false);
+    const [showPicker, setShowPicker] = useState(null);
+    const [isSelectMode, setIsSelectMode] = useState(false);
+    const [selectedMessageIds, setSelectedMessageIds] = useState([]);
+    const [isActive, setIsActive] = useState(false);
+    const [uploadFile, setUploadFile] = useState(false);
+    const [selectedMsg, setSelectedMsg] = useState([]);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+    // 5. Package up the state handlers for components
     const value = {
+        users,
+        setUsers,
         isShowMode,
         setIsShowMode,
         isSelectMode,
@@ -93,16 +117,10 @@ export const AppContextProvider = ({ children }) => {
         setShowPicker,
         selectedMsg,
         setSelectedMsg,
-        setting,
-        setSetting,
         isLogoutModalOpen,
         setIsLogoutModalOpen,
         appLoading,
-        initialUsers,
     };
-
-
-
 
     return (
         <AppContext.Provider value={value}>
@@ -113,6 +131,6 @@ export const AppContextProvider = ({ children }) => {
 
 export const useAppContext = () => {
     const ctx = useContext(AppContext);
-    if (!ctx) throw new Error("useMessages must be used within MessagesProvider");
+    if (!ctx) throw new Error("useAppContext must be used within AppContextProvider");
     return ctx;
 };

@@ -14,7 +14,7 @@ const Home = () => {
   // 1. Grab everything from your global AppContext instead of local state
   const { 
     appLoading, 
-    initialUsers 
+    users 
   } = useAppContext();
 
   // Handle URL changes to reset selected active user context (Keep this here)
@@ -30,7 +30,7 @@ const Home = () => {
     return (
       <LoadingScreen
         initialLoading={appLoading}
-        usersCount={initialUsers.length}
+        usersCount={users.length}
       />
     );
   }
@@ -43,7 +43,6 @@ const Home = () => {
       
         <Sidebar
           className={`${selectedUser ? "hidden md:flex md:flex-col" : ""} `}
-          InitialUsers={initialUsers}
         />  
 
       <ChatWindow />

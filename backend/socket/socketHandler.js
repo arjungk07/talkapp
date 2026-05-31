@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Message from "../models/Message.js";
 
 // Map: userId -> socketId
 const userSocketMap = {};
@@ -28,7 +29,7 @@ export const initSocket = (io) => {
       console.log(`📸 User ${userId} updated profile picture. Sending to all active receivers...`);
 
       // Get all logged-in user IDs currently online
-      console.log("userSocketMap",userSocketMap)
+      console.log("userSocketMap", userSocketMap)
       const onlineUserIds = Object.keys(userSocketMap);
       console.log(onlineUserIds);
 
@@ -47,28 +48,6 @@ export const initSocket = (io) => {
       });
     });
 
-     // on socket for real time Remove profile pic
-    // socket.on("RemoveProfilePic", ({ userId, profilePic }) => {
-    //   console.log("ProfilePic",profilePic);
-
-    //   // Get all logged-in user IDs currently online
-    //   const onlineUserIds = Object.keys(userSocketMap);
-    //   console.log(onlineUserIds);
-
-    //   onlineUserIds.forEach((receiverId) => {
-    //     // Skip the sender so they don't get a double-update event
-    //     if (receiverId !== userId) {
-    //       const receiverSocketId = userSocketMap[receiverId];
-
-    //       if (receiverSocketId) {
-    //         io.to(receiverSocketId).emit("user-image-removed", {
-    //           userId,
-    //           profilePic
-    //         });
-    //       }
-    //     }
-    //   });
-    // });
 
     // Send Message
     socket.on("sendMessage", (data) => {
@@ -88,8 +67,34 @@ export const initSocket = (io) => {
       }
     });
 
-    // delete message
+    // 👉 BACKEND ON FUNCTION: Listens for the frontend trigger
 
+    socket.on("markMessagesAsRead", async ({ chatUserId, currentUserId }) => {
+      try {
+        if (!chatUserId || !currentUserId) return;
+
+        // 1. Double check and enforce database update
+        await Message.updateMany(
+          { senderId: chatUserId, receiverId: currentUserId, read: false },
+          { $set: { read: true } }
+        );
+
+        // 2. Find the active socket connection ID of the original sender (Arjun)
+        const senderSocketId = userSocketMap[chatUserId];
+        console.log(senderSocketId)
+
+        if (senderSocketId) {
+          // 3. Send real-time event directly to Arjun's screen
+          io.to(senderSocketId).emit("messagesMarkedAsRead", {
+            readBy: currentUserId, // Identifies that Ganesh read them
+          });
+        }
+      } catch (error) {
+        console.error("Error updating read status over sockets:", error);
+      }
+    });
+
+    // delete message
     // Listen for the delete message event from the sender
     socket.on("deleteMessages", ({ messageIds, receiverId }) => {
       // console.log(`Received delete request for IDs: ${messageIds} targeting user: ${receiverId}`);
@@ -143,16 +148,25 @@ export const initSocket = (io) => {
 
       if (disconnectedUserId) {
         delete userSocketMap[disconnectedUserId];
+        const disconnectTime = new Date();
 
         try {
+          // 1. Update database right away
           await User.findByIdAndUpdate(disconnectedUserId, {
             isOnline: false,
-            lastSeen: new Date(),
+            lastSeen: disconnectTime,
+          });
+
+          // 2. Broadcast the specific lastSeen event for the active chat window
+          io.emit("userLastSeenUpdate", {
+            userId: disconnectedUserId,
+            lastSeen: disconnectTime,
           });
         } catch (err) {
           console.error("Error updating user offline:", err);
         }
 
+        // 3. get online users for show active now
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
       }
     });

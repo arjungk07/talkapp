@@ -277,6 +277,8 @@ export function EditProfile() {
     const [isProfilePreview, setIsProfilePreview] = useState(false);
     const [isTakePhoto, setIsTakePhoto] = useState(false);
 
+    const navigate = useNavigate();
+
     // 1. Hook reference setup
     const dropdownRef = useRef(null);
 
@@ -426,9 +428,9 @@ export function EditProfile() {
                     {/* Top Navigation */}
                     <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
                         <div className="flex items-center gap-3">
-                            <Link to={'/settings'} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
+                            <button onClick={() => { navigate('/settings', { replace: true }) }} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
                                 <ArrowLeft size={22} />
-                            </Link>
+                            </button>
                             <h1 className="text-lg font-semibold text-gray-900">Edit Profile</h1>
                         </div>
                     </div>
@@ -476,7 +478,7 @@ export function EditProfile() {
                                     className="mt-4 cursor-pointer flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition"
                                 >
                                     <Camera size={16} />
-                                    Edit Photo
+                                    Edit Profile
                                 </button>
 
                                 {mediaDropdown && (
@@ -566,7 +568,10 @@ const Setting = () => {
                 <div className='flex flex-col md:min-w-87.5 h-dvh md:border-r border-chat-muted/15' data-aos="zoom-in" data-aos-duration="500">
                     <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => { navigate('/') }} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
+                            <button
+                                onClick={() => { navigate('/', { replace: true }) }} // 👈 Added replace option here
+                                className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition"
+                            >
                                 <ArrowLeft size={22} />
                             </button>
                             <h1 className="text-lg font-semibold text-gray-900">Setting</h1>

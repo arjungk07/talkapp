@@ -8,37 +8,33 @@ import { model, SYSTEM_PROMPT } from "../config/gemini.js";
 // @access  Private
 const getMessages = async (req, res) => {
   try {
-    const { userId } = req.params; // This is the ID of the person/bot I'm chatting with
-    const myId = req.user._id;
+    const { userId } = req.params; 
+    const myId = req.user._id;     
 
-    // 1. Fetch messages between me and the other user/bot
+    // 1. Mark incoming messages as read FIRST 
+    // This ensures that when we fetch them in the next step, they already have read: true
+    await Message.updateMany(
+      { senderId: userId, receiverId: myId, read: false },
+      { $set: { read: true } }
+    );
+
+    // 2. Fetch messages between me and the other user/bot
     const messages = await Message.find({
-
       $or: [
         { senderId: myId, receiverId: userId },
         { senderId: userId, receiverId: myId },
       ],
-
       deleteforme: {
         $ne: myId
       }
-
     }).sort({ createdAt: 1 });
 
-
-    // 2. Safety Check: If messages is null/undefined, send empty array
+    // 3. Safety Check: If messages is null/undefined, send empty array
     if (!messages) {
       return res.status(200).json([]);
     }
 
-    // 3. Mark as read - isai messages is also read
-    await Message.updateMany(
-      { senderId: userId, receiverId: myId, read: false },
-      { $set: { read: true, isAi: true } }
-    );
-
-
-
+    // 4. Send the updated messages back to the frontend
     res.json(messages);
   } catch (error) {
     console.error("Get messages error:", error);

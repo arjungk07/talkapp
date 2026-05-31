@@ -10,8 +10,8 @@ import { useAppContext } from "../context/AppContext";
 
 const HeaderActionsBar = () => {
 
-    const { isActive, setIsActive } = useAppContext ();
-    
+    const { isActive, setIsActive } = useAppContext();
+
     const handleClick = () => {
         setIsActive(!isActive);
     };
@@ -101,14 +101,14 @@ const ChatHeader = () => {
     const { isTyping } = useMessages(selectedUser);
 
 
-    const isOnline = onlineUsers.includes(selectedUser?._id);
+    const isOnline = selectedUser ? onlineUsers.includes(selectedUser._id) : false;
 
 
 
     return (
         <div>
             {/* CHAT HEADER */}
-            <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center gap-3 shrink-0 z-10">
+            <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center  gap-3 shrink-0 z-10">
 
                 {/* user profile  */}
                 <div className="relative">
@@ -123,20 +123,20 @@ const ChatHeader = () => {
                     )}
 
                     {isOnline && (
-                        <span className="absolute bottom-0 right-0 w-2 h-2 bg-chat-online rounded-full border-2 border-chat-panel" />
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-chat-online rounded-full border-2 border-chat-panel" />
                     )}
                 </div>
 
                 {/* user name and online status */}
-                <div className="flex-1">
-                    <h2 className="font-semibold text-chat-text google-sans">{selectedUser.name}</h2>
-                    <p className="text-xs text-chat-muted">
+                <div className="flex-1 flex flex-col justify-center">
+                    <p className="text-sm font-semibold text-chat-text google-sans">{selectedUser.name}</p>
+                    <p className="text-[9px] md:text-xs text-chat-muted">
                         {isTyping ? (
                             <span className="text-chat-accent animate-pulse">typing...</span>
                         ) : isOnline ? (
-                            <span className="text-chat-online">Online</span>
-                        ) : selectedUser.lastSeen ? (
-                            `Last seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
+                            <span className="text-chat-online">Active now</span>
+                        ) : selectedUser?.lastSeen ? (
+                            `seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
                         ) : (
                             "Offline"
                         )}

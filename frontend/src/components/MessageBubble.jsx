@@ -45,7 +45,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
   useEffect(() => {
     if (!isShowMode || !isSelected) return;
     const onDown = (e) => {
-      if (bubbleRef.current?.contains(e.target) || !actionBarRef.current?.contains(e.target)) {
+      if (!bubbleRef.current?.contains(e.target) && !actionBarRef.current?.contains(e.target)) {
         setIsShowMode(false);
         setSelectedMessageIds([]);
         setSelectedMsg([]);

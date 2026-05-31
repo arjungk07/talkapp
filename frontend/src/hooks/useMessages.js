@@ -32,9 +32,11 @@ export const useMessages = (selectedUser) => {
     setIsTyping(false);
   }, [fetchMessages]);
 
-  // Listen for incoming real-time messages
+// -----------------------------------------------------------------
+  // 1. WATCH REAL-TIME LISTENER FOR NEW INCOMING MESSAGES (Your modified block)
+  // -----------------------------------------------------------------
   useEffect(() => {
-    if (!socket || !selectedUser) return;
+    if (!socket || !selectedUser || !user) return;
 
     const handleNewMessage = (message) => {
       const isRelevant =
@@ -42,6 +44,21 @@ export const useMessages = (selectedUser) => {
         (message.senderId === user._id && message.receiverId === selectedUser._id);
 
       if (isRelevant) {
+        const isIncoming = message.senderId === selectedUser._id; // arjun send msg to ganesh.ganesh phone message.senderId(arjun) === selectedUser._id(arjun)     
+        console.log(isIncoming)
+
+        // If Ganesh has the chat window open and Arjun sends a message live
+        if (isIncoming) {
+          // 👉 EMIT HERE: Tell backend to update DB instantly
+          socket.emit("markMessagesAsRead", {
+            chatUserId: selectedUser._id, // Arjun's ID
+            currentUserId: user._id,      // Ganesh's ID
+          });
+
+          // Mark it read locally so Ganesh's UI shows it as read immediately
+          message.read = true; // this message.read = true change ui for sender only user and receiver active in chatwindow using isIncomming
+        }
+
         setMessages((prev) => [...prev, message]);
         console.log("newmessage from usemessages", message);
       }
@@ -49,7 +66,51 @@ export const useMessages = (selectedUser) => {
 
     socket.on("newMessage", handleNewMessage);
     return () => socket.off("newMessage", handleNewMessage);
-  }, [socket, selectedUser, user]);
+  }, [socket, selectedUser, user, setMessages]);
+
+
+  // -----------------------------------------------------------------
+  // 2. TRIGGER: When Ganesh opens the chat window LATER (or switches to it)
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    if (!socket || !selectedUser?._id || !user?._id) return;
+
+    // 👉 EMIT HERE: Update all past unread messages in the database
+    socket.emit("markMessagesAsRead", {
+      chatUserId: selectedUser._id, // Arjun's ID
+      currentUserId: user._id,      // Ganesh's ID
+    });
+
+    // Instantly update Ganesh's local UI state array items to read: true
+    setMessages((prevMessages) =>
+      prevMessages.map((msg) =>
+        msg.senderId === selectedUser._id ? { ...msg, read: true } : msg
+      )
+    );
+  }, [selectedUser?._id, socket, user?._id, setMessages]);
+
+
+  // -----------------------------------------------------------------
+  // 3. LISTEN: When the other person reads YOUR messages
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    if (!socket || !selectedUser?._id) return;
+
+    const handleMessagesReadByRecipient = ({ readBy }) => {
+      // If Arjun is looking at Ganesh's chat, and Ganesh reads Arjun's messages
+      if (selectedUser._id === readBy) {
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.receiverId === readBy ? { ...msg, read: true } : msg
+          )
+        );
+      }
+    };
+
+    socket.on("messagesMarkedAsRead", handleMessagesReadByRecipient);
+    return () => socket.off("messagesMarkedAsRead", handleMessagesReadByRecipient);
+  }, [socket, selectedUser]);
+
 
 
   // Listen for deletion updates from the server

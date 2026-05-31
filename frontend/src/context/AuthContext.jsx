@@ -25,15 +25,15 @@ export const AuthProvider = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState([]);
 
 
+
+  // 1. Main Socket & Online Users Sync
   useEffect(() => {
-
-
     if (user) {
       const s = initSocket(user._id);
       setSocket(s);
 
       s.on("getOnlineUsers", (users) => {
-        setOnlineUsers(users);
+        setOnlineUsers(users); // Updates sidebar and header green dots instantly
       });
 
       return () => {
@@ -44,8 +44,31 @@ export const AuthProvider = ({ children }) => {
       setSocket(null);
       setOnlineUsers([]);
     }
-
   }, [user]);
+
+  // 2. Targeted Last Seen Sync (Only fires when a user drops offline)
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("userLastSeenUpdate", (data) => {
+      const { userId, lastSeen } = data;
+
+      // Surgically update selectedUser if they are the one who went offline
+      setSelectedUser((prevSelectedUser) => {
+        if (prevSelectedUser && prevSelectedUser._id === userId) {
+          return {
+            ...prevSelectedUser,
+            lastSeen: lastSeen, // Injects the fresh timestamp instantly
+          };
+        }
+        return prevSelectedUser;
+      });
+    });
+
+    return () => {
+      socket.off("userLastSeenUpdate");
+    };
+  }, [socket]); // Cleaned dependency array: no selectedUser loop!
 
   const login = (userData) => {
     localStorage.setItem("talkapp-user", JSON.stringify(userData));
@@ -59,7 +82,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user,setUser,login, logout, socket, onlineUsers, selectedUser, setSelectedUser}}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, socket, onlineUsers, selectedUser, setSelectedUser }}>
       {children}
     </AuthContext.Provider>
   );

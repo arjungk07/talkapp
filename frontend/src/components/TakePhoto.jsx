@@ -57,6 +57,7 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
   };
 
   const startCamera = async () => {
+    console.log("startCamera clicked")
     setError('');
     try {
       stopCamera(); 
@@ -245,7 +246,7 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
           )}
 
           {/* PHASE 1: Live Capture Feed */}
-          {currentPhase === PHASE.CAMERA && (
+          {currentPhase === PHASE.CAMERA && !error && (
             <video
               ref={videoRef}
               autoPlay

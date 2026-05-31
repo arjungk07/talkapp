@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FaUserAlt } from "react-icons/fa";
@@ -6,67 +6,22 @@ import { FiLogOut } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
 import toast from "react-hot-toast";
 import LogOut from './LogOut';
+import { useAppContext } from "../context/AppContext";
 
-const Sidebar = ({ className, InitialUsers = [] }) => {
-  const { onlineUsers, selectedUser, setSelectedUser, socket } = useAuth();
+const Sidebar = ({ className }) => {
+  const { onlineUsers, selectedUser, setSelectedUser } = useAuth();
+  const { users } = useAppContext(); // 👈 Purely read users from context now
   const navigate = useNavigate();
 
-  // --- State Management ---
-  // We initialize with whatever InitialUsers currently is (likely [] at first boot)
-  const [users, setUsers] = useState(InitialUsers);
   const [search, setSearch] = useState("");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  useEffect(() => {
-    console.log("🔄 Sidebar received fresh InitialUsers prop:", InitialUsers);
-    if (Array.isArray(InitialUsers)) {
-      setUsers(InitialUsers);
-    }
-  }, [InitialUsers]); // <-- Do not leave this dependency array empty!
-
-  // --- Real-time Socket Listener for BOTH Image Updates and Removals ---
-  useEffect(() => {
-    if (!socket) return;
-
-    // This single handler manages both adding AND deleting images flawlessly
-    const handleImageChange = (updatedData) => {
-      const { userId, profilePic } = updatedData;
-      console.log("🎯 Real-time image change event received:", updatedData);
-
-      setUsers((prevUsers) => {
-        if (!Array.isArray(prevUsers)) return [];
-
-        return prevUsers.map((user) => {
-          if (String(user._id) === String(userId)) { // arjunId === arjunId update new profile 
-            console.log(`🔄 Syncing image state in UI for user: ${user.name}`);
-            // If the image was removed, profilePic will arrive as null/"" 
-            // and will successfully overwrite the old image URL string here.
-            return { ...user, profilePic: profilePic };
-          }
-          return user;
-        });
-      });
-    };
-
-    // Attach the listener to BOTH backend events
-    socket.on("user-image-updated", handleImageChange);
-    socket.on("user-image-removed", handleImageChange);
-
-    // Clean up both channels when component unmounts
-    return () => {
-      socket.off("user-image-updated", handleImageChange);
-      socket.off("user-image-removed", handleImageChange);
-    };
-  }, [socket]);
-
-
   // --- Local Filtering & Search ---
-  // Filtering happens completely in-memory on the frontend out of the 'users' state
   const filteredUsers = Array.isArray(users)
     ? users.filter((u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-    )
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+      )
     : [];
 
   const isOnline = (userId) => onlineUsers.includes(userId);
@@ -79,7 +34,6 @@ const Sidebar = ({ className, InitialUsers = [] }) => {
 
   return (
     <div className={`${className} md:min-w-87.5 h-full bg-chat-sidebar md:border-r border-chat-border overflow-hidden flex flex-col`}>
-
       {/* Header */}
       <div className="px-4 md:p-5 shrink-0">
         <div className="hidden md:flex justify-between items-center">
@@ -121,8 +75,9 @@ const Sidebar = ({ className, InitialUsers = [] }) => {
                 type="button"
                 key={u._id}
                 onClick={() => handleSelectUser(u)}
-                className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
-                  }`}
+                className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${
+                  selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
+                }`}
               >
                 <div className="relative shrink-0">
                   {u.profilePic ? (
@@ -152,7 +107,11 @@ const Sidebar = ({ className, InitialUsers = [] }) => {
                     )}
                   </p>
                   <p className="text-xs text-chat-muted truncate">
-                    {isOnline(u._id) ? "Active now" : u.lastSeen ? `Seen ${formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true })}` : u.email}
+                    {isOnline(u._id)
+                      ? "Active now"
+                      : u.lastSeen
+                      ? `Seen ${formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true })}`
+                      : "Offline"}
                   </p>
                 </div>
               </button>

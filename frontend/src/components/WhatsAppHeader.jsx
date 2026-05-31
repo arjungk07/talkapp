@@ -9,7 +9,7 @@ import api from '../utils/api';
 import LogOut from '../components/LogOut';
 import { FiLogOut } from "react-icons/fi";
 import { useAppContext } from '../context/AppContext';
-import { useNavigate } from 'react-router-dom';
+import { Link} from 'react-router-dom';
 
 
 
@@ -18,26 +18,20 @@ export function Profile() {
     const { user } = useAuth();
     const { setSetting } = useAppContext();
 
-    const userProfileImage =  user?.profilePic;
-
-    const navigate = useNavigate();
+    const userProfileImage = user?.profilePic;
 
 
-    const NavigateToSettings = () => {
-        console.log("Navigate to settings");
-        setSetting(true);
-        navigate('/settings');
-    }
+
+
 
     return (
 
         <>
 
 
-            <div className="p-2">
+            <Link to={'/settings'} className="p-2">
 
                 <div
-                    onClick={NavigateToSettings}
                     className="
       relative
       w-10
@@ -102,7 +96,7 @@ export function Profile() {
 
                 </div>
 
-            </div>
+            </Link>
 
         </>
     );
@@ -113,19 +107,12 @@ export function Profile() {
 const WhatsAppHeader = ({ className }) => {
 
 
-    const {setSetting, isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
+    const { setSetting, isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
 
     const [activeTab, setActiveTab] = useState('chats');
     const galleryRef = useRef();
 
-    const navigate = useNavigate();
 
-
-    const NavigateToSettings = () => {
-        console.log("Navigate to settings");
-        setSetting(true);
-        navigate('/settings');
-    }
 
 
     const navItems = [
@@ -156,11 +143,10 @@ const WhatsAppHeader = ({ className }) => {
                         </button>
 
 
-                        <button
-                            onClick={NavigateToSettings}
+                        <Link to={"/settings"}
                             className="p-1 rounded-full cursor-pointer">
                             <MoreVertical size={22} />
-                        </button>
+                        </Link>
 
 
 

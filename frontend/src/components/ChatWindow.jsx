@@ -27,7 +27,6 @@ const ChatWindow = () => {
     setIsShowMode,
     isActive,
     setShowPicker,
-    setting
   } = useAppContext();
 
   const { messages, loading, sending, setSending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
@@ -128,6 +127,9 @@ const ChatWindow = () => {
       }
     }
   }, [messages, isTyping, text]);
+
+
+  
 
   const scrollToBottom = () => {
 
@@ -298,7 +300,7 @@ const ChatWindow = () => {
 
 
   // No user selected — only visible on desktop (parent hides this on mobile)
-  if (!selectedUser || setting) {
+  if (!selectedUser ) {
     return (
       <div className="flex-1 flex items-center h-screen justify-center bg-chat-panel" >
         <div className="text-center">
