@@ -9,6 +9,10 @@ import { toast } from 'react-hot-toast';
 import EmojiPicker from "emoji-picker-react";
 import { motion, AnimatePresence } from 'framer-motion';
 import TakePhoto from '../components/TakePhoto';
+import ChatWindow from '../components/ChatWindow';
+import { useNavigate } from 'react-router-dom';
+import LogOut from '../components/LogOut';
+import { Link } from 'react-router-dom';
 
 // 1. Edit New name.
 export function EditNameCard({ user, onUpdateName }) {
@@ -178,12 +182,12 @@ export function ProfilePreview({ closeProfilePreview, userProfileImage }) {
 
                 {/* Main Content Area (Zoom Animated Image Container) */}
                 <div className="flex items-center justify-center p-6 bg-gray-50 min-h-87.5 md:min-h-125">
-                    <div className="w-full aspect-square max-w-112.5 overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
+                    <div className="w-full h-full max-w-112.5 overflow-hidden rounded-lg bg-white shadow-sm border border-gray-200">
                         {userProfileImage ? (
                             <img
                                 src={userProfileImage}
                                 alt="profile"
-
+                                className='w-full h-full object-cover'
                             />
                         ) : (
                             <CgProfile className='w-full h-full text-zinc-400 object-cover' />
@@ -197,7 +201,8 @@ export function ProfilePreview({ closeProfilePreview, userProfileImage }) {
 }
 
 // 2. MEDIA DROPDOWN COMPONENT
-export function MediaDropdown({ onFileSelect, onFileRemove, openProfilePreview, openTakePhoto }) {{}
+export function MediaDropdown({ onFileSelect, onFileRemove, openProfilePreview, openTakePhoto }) {
+    { }
     const fileInputRef = useRef();
 
     const handleFileChange = (e) => {
@@ -264,18 +269,36 @@ export function MediaDropdown({ onFileSelect, onFileRemove, openProfilePreview, 
 }
 
 // 3. EDIT PROFILE COMPONENT
-export function EditProfile({ setIsEditingProfile }) {
-    const { user, setUser, profileImage, setProfileImage } = useAuth();
-    const [loading, setLoading] = useState(false); // loading state 
-    const [mediaDropdown, setMediaDropdown] = useState(false); // media dropdown state like view , upload , remove
-    const [copied, setCopied] = useState(false);//show copy to clipboard
+export function EditProfile() {
+    const { user, socket, setUser } = useAuth();
+    const [loading, setLoading] = useState(false);
+    const [mediaDropdown, setMediaDropdown] = useState(false);
+    const [copied, setCopied] = useState(false);
     const [isProfilePreview, setIsProfilePreview] = useState(false);
     const [isTakePhoto, setIsTakePhoto] = useState(false);
 
-    const userProfileImage = profileImage || user?.profilePic;
+    // 1. Hook reference setup
+    const dropdownRef = useRef(null);
 
+    const baseImage = user?.profilePic;
+    const userProfileImage = baseImage ? `${baseImage}?t=${new Date().getTime()}` : "";
 
-    // handle upload image
+    // 2. Global outside click controller listener hook
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setMediaDropdown(false);
+            }
+        };
+
+        if (mediaDropdown) {
+            document.addEventListener("mousedown", handleOutsideClick);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleOutsideClick);
+        };
+    }, [mediaDropdown]);
+
     const handleUploadImage = async (file) => {
         const formData = new FormData();
         formData.append("file", file);
@@ -284,18 +307,20 @@ export function EditProfile({ setIsEditingProfile }) {
 
         try {
             setLoading(true);
-            setMediaDropdown(false); // Auto-close the dropdown menu
-
+            setMediaDropdown(false);
             const res = await api.post("/api/uploadMedia", formData);
             const data = res.data;
 
-            // Update globally in Context
-            setProfileImage(data.imageUrl);
-
-            // Update in local Storage synchronization
             const updatedUser = { ...user, profilePic: data.imageUrl };
-            console.log(updatedUser);
             localStorage.setItem("talkapp-user", JSON.stringify(updatedUser));
+            setUser(updatedUser)
+
+            if (socket) {
+                socket.emit("updateProfilePic", {
+                    userId: user?._id,
+                    profilePic: data.imageUrl
+                });
+            }
 
             toast.success("Profile Updated!");
         } catch (err) {
@@ -306,7 +331,6 @@ export function EditProfile({ setIsEditingProfile }) {
         }
     };
 
-    // Helper Utility: Converts canvas base64 string to a standard File object
     const dataURLtoFile = (dataurl, filename) => {
         let arr = dataurl.split(','),
             mime = arr[0].match(/:(.*?);/)[1],
@@ -319,83 +343,61 @@ export function EditProfile({ setIsEditingProfile }) {
         return new File([u8arr], filename, { type: mime });
     };
 
-    // Receiver function for the TakePhoto base64 raw string
     const handleCameraCapture = (base64String) => {
-        // Convert base64 into a File instance, then run through your API handler
         const convertedFile = dataURLtoFile(base64String, `profile_${Date.now()}.jpg`);
         handleUploadImage(convertedFile);
     };
 
-    // handle remove image
     const onFileRemove = async () => {
         let removeprofile = true;
-
         try {
             setLoading(true);
-            setMediaDropdown(false); // Auto-close the dropdown menu
-
+            setMediaDropdown(false);
             const res = await api.post("/api/uploadMedia", { userId: user._id, removeprofile });
             const data = res.data;
 
-            // Update globally in Context
-            setProfileImage(data.profilePic);
-
-            // Update in local Storage synchronization
             const updatedUser = { ...user, profilePic: data.profilePic };
-            console.log(updatedUser);
             localStorage.setItem("talkapp-user", JSON.stringify(updatedUser));
-
             setUser(updatedUser);
 
-            toast.success("Profile Removed Successfull!");
+            if (socket) {
+                socket.emit("updateProfilePic", {
+                    userId: user?._id,
+                    profilePic: data.profilePic
+                });
+            }
+
+            toast.success("Profile Removed Successful!");
         } catch (err) {
             console.error(err);
             toast.error("Profile Removed failed!");
         } finally {
             setLoading(false);
         }
-    }
+    };
 
-    // update new name
     const handleUpdateName = async (newname) => {
-        console.log(newname);
         try {
             const { data } = await api.post("/api/auth/register", {
                 newname: newname,
                 email: user.email
             });
-
-            console.log(data);
-
-            // 1. Create the updated user object
             const updatedUser = { ...user, name: data.name };
-
-            // 2. Update localStorage (for page refreshes)
             localStorage.setItem("talkapp-user", JSON.stringify(updatedUser));
-
-            // 3. ✅ UPDATE REACT STATE (This forces the instant UI update!)
             if (typeof setUser === "function") {
                 setUser(updatedUser);
             }
-
         } catch (err) {
             toast.error("Failed to update name");
             console.log(err.message);
         }
     };
 
-    // copy email to clipboard
     const handleCopyEmail = async () => {
         try {
             await navigator.clipboard.writeText(user.email);
-
-            // 1. Show the "Copied" text
             setCopied(true);
-
-            // 2. Automatically hide it after 2 seconds
-            setTimeout(() => {
-                setCopied(false);
-            }, 2000);
+            setTimeout(() => setCopied(false), 2000);
         } catch (err) {
             console.error("Failed to copy", err);
         }
@@ -404,183 +406,167 @@ export function EditProfile({ setIsEditingProfile }) {
     const handleprofilePreview = () => {
         setIsProfilePreview(true);
         setMediaDropdown(false);
-    }
-
-
-
-
-
+    };
 
     return (
         <>
+            {isProfilePreview && (
+                <ProfilePreview closeProfilePreview={() => setIsProfilePreview(false)} userProfileImage={userProfileImage} />
+            )}
 
-            {
-                isProfilePreview && <ProfilePreview closeProfilePreview={() => setIsProfilePreview(false)} userProfileImage={userProfileImage} />
-            }
+            <TakePhoto
+                isOpen={isTakePhoto}
+                onClose={() => setIsTakePhoto(false)}
+                onUpload={handleCameraCapture}
+            />
 
+            <div className='md:flex'>
+                <div className="min-h-screen bg-white md:min-w-87.5 text-gray-900 relative" data-aos="fade-up" data-aos-duration="500">
 
-            {
-                <TakePhoto
-                    isOpen={isTakePhoto}
-                    onClose={() => setIsTakePhoto(false)}
-                    onUpload={handleCameraCapture}
-                />
-            }
-
-            <div className="min-h-screen bg-white md:min-w-87.5 text-gray-900 relative" data-aos="fade-up" data-aos-duration="500">
-
-
-
-                {/* Top Navigation */}
-                <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setIsEditingProfile(false)} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
-                            <ArrowLeft size={22} />
-                        </button>
-                        <h1 className="text-lg font-semibold text-gray-900">Edit Profile</h1>
-                    </div>
-
-                </div>
-
-                {/* Profile Section */}
-                <div className="mx-auto max-w-md px-5 py-6">
-                    <div className="flex flex-col items-center mb-16">
-                        <div className="relative">
-                            {userProfileImage ? (
-                                <div className="relative h-32 w-32">
-                                    {/* Loading Spinner Overlaid on top of the image */}
-                                    {loading && (
-                                        <div className="absolute inset-0 bg-white/30 flex items-center justify-center z-50 rounded-full">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-black" />
-                                        </div>
-                                    )}
-
-                                    {/* Profile Image */}
-                                    <img
-                                        src={userProfileImage}
-                                        alt="profile"
-                                        className="h-full w-full rounded-full object-cover border-4 border-gray-100"
-                                    />
-                                </div>
-                            ) : (
-                                /* Fallback UI when no image exists */
-                                <div className="w-32 h-32 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-400 relative">
-                                    {loading && (
-                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-xs flex items-center justify-center z-50 rounded-full">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-black" />
-                                        </div>
-                                    )}
-                                    <CgProfile size={48} />
-                                </div>
-                            )}
-
-                            <button
-                                onClick={() => setMediaDropdown(!mediaDropdown)}
-                                className="absolute cursor-pointer z-50 bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#00a884] text-white shadow-lg hover:bg-[#06b48f] transition"
-                            >
-                                <Camera size={18} />
-                            </button>
-                        </div>
-
-                        <div className='relative'>
-                            <button
-                                onClick={() => setMediaDropdown(!mediaDropdown)}
-                                className="mt-4 cursor-pointer flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition"
-                            >
-                                <Camera size={16} />
-                                Edit Photo
-                            </button>
-
-                            {mediaDropdown && (
-                                <MediaDropdown
-                                    onFileSelect={handleUploadImage}
-                                    onFileRemove={onFileRemove}
-                                    openProfilePreview={handleprofilePreview}
-                                    openTakePhoto={() => setIsTakePhoto(true)}
-                                />
-                            )}
+                    {/* Top Navigation */}
+                    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
+                        <div className="flex items-center gap-3">
+                            <Link to={'/settings'} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
+                                <ArrowLeft size={22} />
+                            </Link>
+                            <h1 className="text-lg font-semibold text-gray-900">Edit Profile</h1>
                         </div>
                     </div>
 
-                    {/* Name */}
-                    {/* <div className="mt-5 rounded-2xl bg-gray-50 p-4 border border-gray-100 shadow-sm">
-                    <span className="text-sm font-medium text-gray-500">Name</span>
-                    <div className="my-3 flex items-center justify-between">
-                        <p className="text-lg font-medium text-gray-800">
-                            {user?.name || "No Name Set"}
-                        </p>
-                        <button className="rounded-full p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition">
-                            <Pencil size={18} className='cursor-pointer' />
-                        </button>
-                    </div>
-                </div> */}
-                    <EditNameCard user={user} onUpdateName={handleUpdateName} />
+                    {/* Profile Section */}
+                    <div className="mx-auto max-w-md px-5 py-6">
+                        <div className="flex flex-col items-center mb-16">
+                            <div className="relative">
+                                {userProfileImage ? (
+                                    <div className="relative h-32 w-32">
+                                        {loading && (
+                                            <div className="absolute inset-0 bg-white/30 flex items-center justify-center z-50 rounded-full">
+                                                <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-black" />
+                                            </div>
+                                        )}
+                                        <img
+                                            src={userProfileImage}
+                                            alt="profile"
+                                            className="h-full w-full rounded-full object-cover border-4 border-gray-100"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-32 h-32 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-400 relative">
+                                        {loading && (
+                                            <div className="absolute inset-0 bg-white/60 backdrop-blur-xs flex items-center justify-center z-50 rounded-full">
+                                                <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-b-4 border-black" />
+                                            </div>
+                                        )}
+                                        <CgProfile size={48} />
+                                    </div>
+                                )}
 
-                    {/* Email Field */}
-                    <div className="mt-5 rounded-2xl bg-gray-50 p-4 border border-gray-100 shadow-sm">
-                        <div className="mb-3">
-                            <span className="text-sm font-medium text-gray-500">Email</span>
-                        </div>
-
-                        <div className=" flex items-center justify-between">
-
-                            <div className="flex items-center gap-2">
-                                <AnimatePresence>
-                                    {copied && (
-                                        <motion.span
-                                            initial={{ opacity: 0, scale: 0.5 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.5 }}
-                                            transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
-                                            className="fixed left-3 bottom-2 md:bottom-4 z-50 whitespace-nowrap bg-gray-900/90 text-white text-[11px] font-medium px-6 py-3 rounded-xl shadow-lg pointer-events-none"
-                                        >
-                                            Copied to clipboard !
-                                        </motion.span>
-                                    )}
-                                </AnimatePresence>
-                                <div className="rounded-full bg-gray-200 text-gray-600 p-2">
-                                    <Mail size={18} />
-                                </div>
-                                <span className="text-sm font-medium text-gray-800">
-                                    {user?.email}
-                                </span>
+                                <button
+                                    onClick={() => setIsTakePhoto(true)}
+                                    className="absolute cursor-pointer z-50 bottom-1 right-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#00a884] text-white shadow-lg hover:bg-[#06b48f] transition"
+                                >
+                                    <Camera size={18} />
+                                </button>
                             </div>
-                            <button
-                                onClick={handleCopyEmail}
-                                className="rounded-full cursor-pointer p-2 ms-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition">
-                                <Copy size={18} />
-                            </button>
+
+                            {/* Ref Attached Action Wrapper Area */}
+                            <div className='relative'>
+                                <button
+                                    onClick={() => setMediaDropdown(!mediaDropdown)}
+                                    className="mt-4 cursor-pointer flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 transition"
+                                >
+                                    <Camera size={16} />
+                                    Edit Photo
+                                </button>
+
+                                {mediaDropdown && (
+                                    <div ref={dropdownRef}>
+                                        <MediaDropdown
+                                            onFileSelect={handleUploadImage}
+                                            onFileRemove={onFileRemove}
+                                            openProfilePreview={handleprofilePreview}
+                                            openTakePhoto={() => setIsTakePhoto(true)}
+                                        />
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
+                        <EditNameCard user={user} onUpdateName={handleUpdateName} />
+
+                        {/* Email Field */}
+                        <div className="mt-5 rounded-2xl bg-gray-50 p-4 border border-gray-100 shadow-sm">
+                            <div className="mb-3">
+                                <span className="text-sm font-medium text-gray-500">Email</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <AnimatePresence>
+                                        {copied && (
+                                            <motion.span
+                                                initial={{ opacity: 0, scale: 0.5 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.5 }}
+                                                transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
+                                                className="fixed left-3 bottom-2 md:bottom-4 z-50 whitespace-nowrap bg-gray-900/90 text-white text-[11px] font-medium px-6 py-3 rounded-xl shadow-lg pointer-events-none"
+                                            >
+                                                Copied to clipboard !
+                                            </motion.span>
+                                        )}
+                                    </AnimatePresence>
+                                    <div className="rounded-full bg-gray-200 text-gray-600 p-2">
+                                        <Mail size={18} />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-800">
+                                        {user?.email}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={handleCopyEmail}
+                                    className="rounded-full cursor-pointer p-2 ms-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition"
+                                >
+                                    <Copy size={18} />
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
+
+                <ChatWindow />
             </div>
-
-
         </>
-
     );
 }
 
 
-
-
 // 4. MAIN SETTINGS VIEW CONTAINER
 const Setting = () => {
-    const { user, profileImage } = useAuth();
-    const { setting, setSetting, setIsLogoutModalOpen } = useAppContext();
+    const { user } = useAuth();
+    const { isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
     const [isEditingProfile, setIsEditingProfile] = useState(false);
 
+    const navigate = useNavigate();
 
-    const userProfileImage = profileImage || user?.profilePic;
+    // Base image URL fallback logic
+    const baseImage = user?.profilePic;
+
+    // Integrate timestamp only if baseImage exists to avoid generating a broken URL string
+    const userProfileImage = baseImage
+        ? `${baseImage}?t=${new Date().getTime()}`
+        : "";
 
     return (
         <>
 
-            {setting && !isEditingProfile && (
+
+            <div className='md:flex'>
+
                 <div className='flex flex-col md:min-w-87.5 h-dvh md:border-r border-chat-muted/15' data-aos="zoom-in" data-aos-duration="500">
                     <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setSetting(false)} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
+                            <button onClick={() => { navigate('/') }} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
                                 <ArrowLeft size={22} />
                             </button>
                             <h1 className="text-lg font-semibold text-gray-900">Setting</h1>
@@ -604,8 +590,7 @@ const Setting = () => {
                         </div>
 
                         {/* Interactive Profile Row Entry */}
-                        <div
-                            onClick={() => setIsEditingProfile(true)}
+                        <Link to={'/EditProfile'}
                             className="cursor-pointer px-4 py-4 flex items-center justify-center gap-3 rounded-2xl hover:bg-gray-50 transition"
                         >
                             {userProfileImage ? (
@@ -623,12 +608,11 @@ const Setting = () => {
                                 <h3 className="font-semibold text-gray-800">{user?.username || user?.name}</h3>
                                 <p className="text-xs text-gray-500 mt-0.5">Tap to change profile info</p>
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Menu Options */}
                         <div className="py-2">
-                            <button
-                                onClick={() => setIsEditingProfile(true)}
+                            <Link to={'/EditProfile'}
                                 className="w-full cursor-pointer px-6 py-4 flex items-center justify-start gap-3 rounded-2xl hover:bg-gray-50 transition"
                             >
                                 <div className='flex items-center justify-center'>
@@ -638,7 +622,7 @@ const Setting = () => {
                                     <h4 className="text-sm font-medium text-gray-800">Profile</h4>
                                     <p className="text-xs text-gray-500 mt-0.5">Name, Username, profile photo</p>
                                 </div>
-                            </button>
+                            </Link>
                         </div>
 
                         {/* Logout Option */}
@@ -653,12 +637,20 @@ const Setting = () => {
                         </div>
                     </div>
                 </div>
+
+                <ChatWindow />
+
+            </div>
+
+
+            {isLogoutModalOpen && (
+                <LogOut isOpen={isLogoutModalOpen} onClose={() => setIsLogoutModalOpen(false)} />
             )}
 
             {/* Render Edit Profile View */}
-            {isEditingProfile && (
+            {/* {isEditingProfile && (
                 <EditProfile setIsEditingProfile={setIsEditingProfile} />
-            )}
+            )} */}
         </>
     );
 };

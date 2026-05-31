@@ -1,101 +1,75 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { FaUserAlt } from "react-icons/fa";
 import { FiLogOut } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
-import api from "../utils/api";
 import toast from "react-hot-toast";
 import LogOut from './LogOut';
 
-const Sidebar = ({ className, preloadedUsers = [] }) => {
-  const { onlineUsers, selectedUser, setSelectedUser } = useAuth();
+const Sidebar = ({ className, InitialUsers = [] }) => {
+  const { onlineUsers, selectedUser, setSelectedUser, socket } = useAuth();
   const navigate = useNavigate();
 
   // --- State Management ---
-  const [users, setUsers] = useState(preloadedUsers);
+  // We initialize with whatever InitialUsers currently is (likely [] at first boot)
+  const [users, setUsers] = useState(InitialUsers);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  // Pagination State
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(preloadedUsers.length >= 20);
-  const observerTarget = useRef(null);
-
-  /**
-   * Core Fetch Function
-   * Fetches data and appends it to the existing list
-   */
-  const fetchUsers = useCallback(async (pageNum, searchQuery = "") => {
-    if (loading) return;
-    setLoading(true);
-
-    try {
-      const { data } = await api.get(`/api/users`, {
-        params: {
-          page: pageNum,
-          limit: 20,
-          search: searchQuery
-        }
-      });
-
-      if (data.length < 20) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
-
-      setUsers((prev) => {
-        if (pageNum === 1) return data;
-
-        const combined = [...prev, ...data];
-        const unique = Array.from(new Map(combined.map(item => [item._id, item])).values());
-        toast.success("Contacts loaded successfully", { id: "contacts-loaded" });
-        return unique;
-      });
-
-    } catch (err) {
-      toast.error("Failed to load contacts");
-      console.log(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [loading]);
-
-  // Handle Search Changes
   useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    fetchUsers(1, search);
-  }, [search]);
-
-  // Intersection Observer for Infinite Scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          fetchUsers(nextPage, search);
-        }
-      },
-      { threshold: 1.0 }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    console.log("🔄 Sidebar received fresh InitialUsers prop:", InitialUsers);
+    if (Array.isArray(InitialUsers)) {
+      setUsers(InitialUsers);
     }
+  }, [InitialUsers]); // <-- Do not leave this dependency array empty!
 
-    return () => observer.disconnect();
-  }, [hasMore, loading, page, search, fetchUsers]);
+  // --- Real-time Socket Listener for BOTH Image Updates and Removals ---
+  useEffect(() => {
+    if (!socket) return;
 
-  const filteredUsers = users.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+    // This single handler manages both adding AND deleting images flawlessly
+    const handleImageChange = (updatedData) => {
+      const { userId, profilePic } = updatedData;
+      console.log("🎯 Real-time image change event received:", updatedData);
+
+      setUsers((prevUsers) => {
+        if (!Array.isArray(prevUsers)) return [];
+
+        return prevUsers.map((user) => {
+          if (String(user._id) === String(userId)) { // arjunId === arjunId update new profile 
+            console.log(`🔄 Syncing image state in UI for user: ${user.name}`);
+            // If the image was removed, profilePic will arrive as null/"" 
+            // and will successfully overwrite the old image URL string here.
+            return { ...user, profilePic: profilePic };
+          }
+          return user;
+        });
+      });
+    };
+
+    // Attach the listener to BOTH backend events
+    socket.on("user-image-updated", handleImageChange);
+    socket.on("user-image-removed", handleImageChange);
+
+    // Clean up both channels when component unmounts
+    return () => {
+      socket.off("user-image-updated", handleImageChange);
+      socket.off("user-image-removed", handleImageChange);
+    };
+  }, [socket]);
+
+
+  // --- Local Filtering & Search ---
+  // Filtering happens completely in-memory on the frontend out of the 'users' state
+  const filteredUsers = Array.isArray(users)
+    ? users.filter((u) =>
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
+    )
+    : [];
 
   const isOnline = (userId) => onlineUsers.includes(userId);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   const handleSelectUser = (u) => {
     setSelectedUser(u);
@@ -147,9 +121,8 @@ const Sidebar = ({ className, preloadedUsers = [] }) => {
                 type="button"
                 key={u._id}
                 onClick={() => handleSelectUser(u)}
-                className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${
-                  selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
-                }`}
+                className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
+                  }`}
               >
                 <div className="relative shrink-0">
                   {u.profilePic ? (
@@ -161,7 +134,7 @@ const Sidebar = ({ className, preloadedUsers = [] }) => {
                     <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-chat-online rounded-full border-2 border-chat-sidebar" />
                   )}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-chat-text text-sm truncate">
                     {search ? (
@@ -185,22 +158,12 @@ const Sidebar = ({ className, preloadedUsers = [] }) => {
               </button>
             ))}
 
-            {/* Pagination Sentinel */}
-            {hasMore && (
-              <div ref={observerTarget} className="py-6 flex justify-center w-full">
-                <div className="w-6 h-6 border-2 border-chat-accent border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-
-            {!hasMore && users.length > 0 && (
-              <p className="text-center text-[10px] text-chat-muted py-4 uppercase tracking-widest opacity-50">
-                All contacts loaded
-              </p>
-            )}
+            <p className="text-center text-[10px] text-chat-muted py-4 uppercase tracking-widest opacity-50">
+              All contacts loaded
+            </p>
           </>
         )}
       </div>
-
     </div>
   );
 };

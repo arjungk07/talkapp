@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, X, Check, RotateCw, RefreshCw } from 'lucide-react';
+import { Camera, X, Check, RotateCw, RefreshCw, SwitchCamera } from 'lucide-react';
 
 const PHASE = {
   CAMERA: 'CAMERA',
@@ -14,7 +14,12 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
   const [rotation, setRotation] = useState(0);
   const [error, setError] = useState('');
 
-  // Dragging states for positioning the image behind the crop circle
+  // Smart default initialization check
+  const [facingMode, setFacingMode] = useState(() => {
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    return isMobile ? 'environment' : 'user';
+  });
+
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -37,6 +42,13 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
     }
   }, [isOpen]);
 
+  // Hook to handle toggles seamlessly
+  useEffect(() => {
+    if (isOpen) {
+      startCamera();
+    }
+  }, [facingMode]);
+
   const stopCamera = () => {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
@@ -50,7 +62,7 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
       stopCamera(); 
       const constraints = {
         video: {
-          facingMode: { ideal: 'environment' },
+          facingMode: facingMode,
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
@@ -68,6 +80,10 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
     }
   };
 
+  const toggleCamera = () => {
+    setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
+  };
+
   const captureSnapshot = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
@@ -77,7 +93,7 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
     
     const ctx = canvas.getContext('2d');
     
-    const isUserFacing = stream?.getVideoTracks()[0]?.getSettings()?.facingMode === 'user';
+    const isUserFacing = facingMode === 'user';
     if (isUserFacing) {
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
@@ -91,7 +107,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
     setCurrentPhase(PHASE.REVIEW);
   };
 
-  // --- Drag Mechanics (Mouse & Touch Hooks) ---
   const handlePointerDown = (e) => {
     setIsDragging(true);
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -113,7 +128,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
     setIsDragging(false);
   };
 
-  // --- Precision Math Canvas Cropping ---
   const handleDoneCrop = () => {
     const img = new Image();
     img.src = capturedImg;
@@ -122,23 +136,20 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
 
-      const cropSize = 500; // Final Output resolution size
+      const cropSize = 500;
       canvas.width = cropSize;
       canvas.height = cropSize;
 
       ctx.clearRect(0, 0, cropSize, cropSize);
       ctx.save();
 
-      // Create a perfectly round clipping mask path on the canvas
       ctx.beginPath();
       ctx.arc(cropSize / 2, cropSize / 2, cropSize / 2, 0, Math.PI * 2);
       ctx.clip();
 
-      // Find viewport scale differences to map display dragging accurately onto image pixels
       const viewWindow = containerRef.current.getBoundingClientRect();
-      const circleDisplaySize = window.innerWidth < 768 ? 288 : 320; // Matches w-72 (288px) and md:w-80 (320px)
+      const circleDisplaySize = window.innerWidth < 768 ? 288 : 320;
 
-      // Establish base scaling factor based on covering the crop viewport container
       const scaleX = viewWindow.width / img.width;
       const scaleY = viewWindow.height / img.height;
       const baseScale = Math.max(scaleX, scaleY);
@@ -146,11 +157,9 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
       const displayedWidth = img.width * baseScale;
       const displayedHeight = img.height * baseScale;
 
-      // Translate canvas center to position calculations relatively
       ctx.translate(cropSize / 2, cropSize / 2);
       ctx.rotate((rotation * Math.PI) / 180);
 
-      // Convert UI drag offsets into exact source image pixels
       const finalScale = cropSize / circleDisplaySize;
       const renderX = (offset.x * finalScale) - (cropSize / 2);
       const renderY = (offset.y * finalScale) - (cropSize / 2);
@@ -158,7 +167,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
       const drawWidth = displayedWidth * finalScale;
       const drawHeight = displayedHeight * finalScale;
 
-      // Draw the image shifted by the user's drag positions
       ctx.drawImage(
         img, 
         renderX - (drawWidth - cropSize) / 2, 
@@ -191,12 +199,25 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
             {currentPhase === PHASE.REVIEW && "Preview Frame"}
             {currentPhase === PHASE.CROP && "Drag to Center"}
           </span>
-          <button 
-            onClick={onClose} 
-            className="p-2 rounded-full cursor-pointer bg-neutral-900/60 text-neutral-400 hover:text-white border border-neutral-800 transition-colors pointer-events-auto"
-          >
-            <X size={18} />
-          </button>
+          
+          <div className="flex items-center gap-2 pointer-events-auto">
+            {/* NEW FEATURE: Toggle Button UI visible only during camera state */}
+            {currentPhase === PHASE.CAMERA && !error && stream && (
+              <button 
+                onClick={toggleCamera} 
+                title="Switch Camera View"
+                className="p-2 rounded-full cursor-pointer bg-neutral-900/60 text-neutral-400 hover:text-white border border-neutral-800 transition-colors"
+              >
+                <SwitchCamera size={18} />
+              </button>
+            )}
+            <button 
+              onClick={onClose} 
+              className="p-2 rounded-full cursor-pointer bg-neutral-900/60 text-neutral-400 hover:text-white border border-neutral-800 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Viewport Panel Wrapper */}
@@ -230,7 +251,7 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
               autoPlay
               playsInline
               muted
-              className="w-full h-full object-cover scale-x-[-1]" 
+              className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`} 
             />
           )}
 
@@ -246,7 +267,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
           {/* PHASE 3: Interactive Draggable Crop Overlay */}
           {currentPhase === PHASE.CROP && capturedImg && (
             <div className="absolute inset-0 w-full h-full flex items-center justify-center">
-              {/* Draggable Image Layer */}
               <div 
                 className="w-full h-full bg-cover bg-center will-change-transform cursor-move"
                 style={{ 
@@ -256,7 +276,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
                 }}
               />
               
-              {/* Locked Dark Crop Stencil Frame Overlay */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div className="w-72 h-72 md:w-80 md:h-80 rounded-full border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(10,10,10,0.75)] relative">
                   <div className="absolute -top-10 inset-x-0 text-center">
@@ -272,8 +291,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
 
         {/* Bottom Panel Actions Strip */}
         <div className="bg-neutral-950 border-t border-neutral-900 px-6 py-5 flex items-center justify-center min-h-26.25 z-20">
-          
-          {/* Controls for Phase 1: Capture */}
           {currentPhase === PHASE.CAMERA && (
             <button
               type="button"
@@ -287,7 +304,6 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
             </button>
           )}
 
-          {/* Controls for Phase 2: Accept/Reject */}
           {currentPhase === PHASE.REVIEW && (
             <div className="flex items-center gap-14">
               <button
@@ -305,19 +321,18 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
             </div>
           )}
 
-          {/* Controls for Phase 3: Fine-tune Crop & Spin */}
           {currentPhase === PHASE.CROP && (
             <div className="flex items-center justify-between w-full max-w-sm">
               <button
                 onClick={() => { setCurrentPhase(PHASE.REVIEW); setOffset({x:0, y:0}); }}
-                className="px-4 cursor-pointer  py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
+                className="px-4 cursor-pointer py-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors"
               >
                 Back
               </button>
               
               <button
                 onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                className="p-3 cursor-pointer  bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 rounded-xl transition-all active:scale-90 flex items-center gap-2 text-sm font-medium"
+                className="p-3 cursor-pointer bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 rounded-xl transition-all active:scale-90 flex items-center gap-2 text-sm font-medium"
               >
                 <RotateCw size={18} />
                 <span>Rotate</span>
@@ -325,7 +340,7 @@ export default function TakePhoto({ isOpen, onClose, onUpload }) {
               
               <button
                 onClick={handleDoneCrop}
-                className="px-6  cursor-pointer py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
+                className="px-6 cursor-pointer py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-blue-600/20 transition-all active:scale-95"
               >
                 Done
               </button>

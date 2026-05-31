@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }) => {
 
 
   const [user, setUser] = useState(getInitialState);
-  const [profileImage, setProfileImage] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
@@ -60,7 +59,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user,setUser,login, logout, socket, onlineUsers, selectedUser, setSelectedUser, profileImage, setProfileImage }}>
+    <AuthContext.Provider value={{ user,setUser,login, logout, socket, onlineUsers, selectedUser, setSelectedUser}}>
       {children}
     </AuthContext.Provider>
   );

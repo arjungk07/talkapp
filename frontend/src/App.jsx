@@ -11,6 +11,8 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgetPassword"
 import VerifyOtp from "./pages/VerfiyOtp";
 import ResetPassword from "./pages/ResetPassword";
+import Setting from './pages/Setting'
+import { EditProfile } from "./pages/Setting";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useEffect } from "react";
@@ -41,6 +43,8 @@ const AppRoutes = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       {/* Fixed: replace isn't a prop for Route, it's for Navigate */}
       <Route path="/chat/:id" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Setting /></ProtectedRoute>}  />
+      <Route path="/EditProfile" element={<ProtectedRoute><EditProfile/></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

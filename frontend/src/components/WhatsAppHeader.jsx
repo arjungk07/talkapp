@@ -9,16 +9,25 @@ import api from '../utils/api';
 import LogOut from '../components/LogOut';
 import { FiLogOut } from "react-icons/fi";
 import { useAppContext } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
 
 
 
 export function Profile() {
 
-    const { profileImage, user } = useAuth();
-    const {setSetting} = useAppContext();
+    const { user } = useAuth();
+    const { setSetting } = useAppContext();
 
-    const userProfileImage = profileImage || user?.profilePic;
+    const userProfileImage =  user?.profilePic;
 
+    const navigate = useNavigate();
+
+
+    const NavigateToSettings = () => {
+        console.log("Navigate to settings");
+        setSetting(true);
+        navigate('/settings');
+    }
 
     return (
 
@@ -28,7 +37,7 @@ export function Profile() {
             <div className="p-2">
 
                 <div
-                    onClick={() => setSetting(true)}
+                    onClick={NavigateToSettings}
                     className="
       relative
       w-10
@@ -39,7 +48,7 @@ export function Profile() {
       group
     "
                 >
-                   
+
 
                     {/* ROTATING RING */}
                     <div
@@ -104,12 +113,19 @@ export function Profile() {
 const WhatsAppHeader = ({ className }) => {
 
 
-    const {setting,setSetting,isLogoutModalOpen,setIsLogoutModalOpen} = useAppContext();
+    const {setSetting, isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
 
     const [activeTab, setActiveTab] = useState('chats');
     const galleryRef = useRef();
 
+    const navigate = useNavigate();
 
+
+    const NavigateToSettings = () => {
+        console.log("Navigate to settings");
+        setSetting(true);
+        navigate('/settings');
+    }
 
 
     const navItems = [
@@ -130,9 +146,9 @@ const WhatsAppHeader = ({ className }) => {
                     </h1>
 
                     <div className="flex items-center gap-3">
-                       
 
-                    
+
+
                         <Profile />
 
                         <button className="p-1 rounded-full cursor-pointer ">
@@ -140,9 +156,9 @@ const WhatsAppHeader = ({ className }) => {
                         </button>
 
 
-                        <button 
-                        onClick={()=>setSetting(!setting)}
-                        className="p-1 rounded-full cursor-pointer">
+                        <button
+                            onClick={NavigateToSettings}
+                            className="p-1 rounded-full cursor-pointer">
                             <MoreVertical size={22} />
                         </button>
 
@@ -175,9 +191,9 @@ const WhatsAppHeader = ({ className }) => {
                     {navItems.map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => {setActiveTab(item.id) , setSetting(false)}}
+                            onClick={() => { setActiveTab(item.id) }}
                             className={`relative w-12 h-12 rounded-full transition-all cursor-pointer flex justify-center items-center
-            ${activeTab === item.id && !setting ? 'bg-chat-accent/5 text-black' : 'text-black/70 hover:bg-chat-accent/5 hover:text-black'}`}
+            ${activeTab === item.id ? 'bg-chat-accent/5 text-black' : 'text-black/70 hover:bg-chat-accent/5 hover:text-black'}`}
                         >
                             {item.icon}
 

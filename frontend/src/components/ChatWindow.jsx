@@ -27,7 +27,7 @@ const ChatWindow = () => {
     setIsShowMode,
     isActive,
     setShowPicker,
-    setting,
+    setting
   } = useAppContext();
 
   const { messages, loading, sending, setSending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
@@ -309,12 +309,7 @@ const ChatWindow = () => {
             </svg>
           </div>
           <h2 className="text-xl text-chat-text mb-2 font-bold">Welcome to TalkApp</h2>
-          <p className="text-chat-muted text-sm max-w-xs talkapp-font font-medium">
-            {setting
-              ? "Manage your account settings and profile details"
-              : "Select a contact from the sidebar to start a conversation"
-            }
-          </p>
+          <p className="text-chat-muted text-sm max-w-xs talkapp-font font-medium">Select a contact from the sidebar to start a conversation</p>
         </div>
       </div>
     );

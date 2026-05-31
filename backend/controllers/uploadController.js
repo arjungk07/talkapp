@@ -5,7 +5,6 @@ export const uploadMedia = async (req, res) => {
   try {
     // 1. Destructure ALL needed variables from req.body (including 'text')
     const { userId, type, receiverId, removeprofile, text } = req.body;
-    console.log("removeprofile:", removeprofile);
 
     // ==========================================
     // CONDITION 0: Handle Profile Picture Removal
