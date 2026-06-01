@@ -7,7 +7,6 @@ import { useAppContext } from '../context/AppContext';
 
 const Logout = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
-  const {setSetting} = useAppContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +27,6 @@ const Logout = ({ isOpen, onClose }) => {
 
       // 2. Clear LocalStorage and Reset Auth State
       logout();
-      setSetting(false);
 
       // 3. UI Feedback and Redirect
       toast.success("Log Out successfully ✅");
@@ -38,8 +36,12 @@ const Logout = ({ isOpen, onClose }) => {
       toast.error(err.response?.data?.message || "Failed to Log Out ❌");
     } finally {
       setLoading(false);
-      setSetting(false)
-      onClose();
+      // Safely call onClose only if it was passed down
+      if (typeof onClose === 'function') {
+        onClose();
+      } else {
+        console.warn("Warning: onClose prop was not provided to this component.");
+      }
     }
   };
 

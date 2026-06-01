@@ -11,6 +11,7 @@ import { useAppContext } from "../context/AppContext";
 const Sidebar = ({ className }) => {
   const { onlineUsers, selectedUser, setSelectedUser } = useAuth();
   const { users } = useAppContext(); // 👈 Purely read users from context now
+  console.log("sideBar users",users)
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");

@@ -16,7 +16,6 @@ import { Link} from 'react-router-dom';
 export function Profile() {
 
     const { user } = useAuth();
-    const { setSetting } = useAppContext();
 
     const userProfileImage = user?.profilePic;
 
@@ -107,7 +106,7 @@ export function Profile() {
 const WhatsAppHeader = ({ className }) => {
 
 
-    const { setSetting, isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
+    const { isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
 
     const [activeTab, setActiveTab] = useState('chats');
     const galleryRef = useRef();

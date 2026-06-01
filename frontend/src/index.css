@@ -7,7 +7,6 @@
 
 html, body {
   /* Never let the browser scroll the page itself */
-  overscroll-behavior: none;
   overflow: hidden;
   height: 100%;
   scroll-behavior: smooth;

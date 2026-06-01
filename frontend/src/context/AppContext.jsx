@@ -61,24 +61,32 @@ export const AppContextProvider = ({ children }) => {
     useEffect(() => {
         if (!socket) return;
 
-        // 1. Manage Global Profile Image Real-time Changes
+        // 1. ONLY updates profilePic. Keeps everything else exactly as it is.
         const handleImageChange = (updatedData) => {
             const { userId, profilePic } = updatedData;
+            if (!profilePic) return; // Safety check
+
             setUsers((prevUsers) => {
                 if (!Array.isArray(prevUsers)) return [];
                 return prevUsers.map((user) =>
-                    String(user._id) === String(userId) ? { ...user, profilePic } : user
+                    String(user._id) === String(userId)
+                        ? { ...user, profilePic: profilePic } // Explicitly set just the pic
+                        : user
                 );
             });
         };
 
-        // 2. Manage Global Last Seen Updates
+        // 2. ONLY updates lastSeen. Keeps everything else exactly as it is.
         const handleLastSeenChange = (data) => {
             const { userId, lastSeen } = data;
+            if (!lastSeen) return; // Safety check
+
             setUsers((prevUsers) => {
                 if (!Array.isArray(prevUsers)) return [];
                 return prevUsers.map((u) =>
-                    u._id === userId ? { ...u, lastSeen } : u
+                    String(u._id) === String(userId)
+                        ? { ...u, lastSeen: lastSeen } // Explicitly set just the timestamp
+                        : u
                 );
             });
         };
