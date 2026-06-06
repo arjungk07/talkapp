@@ -1,99 +1,149 @@
 import User from "../models/User.js";
 import Message from "../models/Message.js"; // Import your message model
 
-export const uploadMedia = async (req, res) => {
+export const uploadMedia = async (
+  req,
+  res
+) => {
   try {
-    // 1. Destructure ALL needed variables from req.body (including 'text')
-    const { userId, type, receiverId, removeprofile, text } = req.body;
+    const {
+      userId,
+      type,
+      receiverId,
+      text,
+      removeprofile,
+    } = req.body;
 
-    // ==========================================
-    // CONDITION 0: Handle Profile Picture Removal
-    // ==========================================
+    console.log("userId:", userId);
+    console.log("type:", type);
+    console.log("receiverId:", receiverId);
+
+    // Remove profile pic
     if (removeprofile) {
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { profilePic: "" },
-        { new: true }
-      );
+      const updatedUser =
+        await User.findByIdAndUpdate(
+          userId,
+          {
+            profilePic: "",
+          },
+          {
+            new: true,
+          }
+        );
 
-      // Check if user exists BEFORE doing anything else
       if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({
+          message:
+            "User not found",
+        });
       }
 
-      // NOTE: Removed 'updatedUser.save()' because findByIdAndUpdate already saves it.
-
       return res.status(200).json({
-        message: "Profile picture removed successfully",
-        profilePic: updatedUser.profilePic, 
+        message:
+          "Profile removed",
         user: updatedUser,
       });
     }
 
-    // 2. Validation check for remaining operations (Only if NOT removing profile)
+    // File validation
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return res.status(400).json({
+        message:
+          "No file uploaded",
+      });
     }
 
-    // Cloudinary URL from multer-storage-cloudinary
+    // Ensure image
+    if (
+      !req.file.mimetype.startsWith(
+        "image/"
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Only image uploads allowed",
+      });
+    }
+
     const imageUrl = req.file.path;
 
-    // ==========================================
-    // CONDITION 1: Handle Profile Picture Update
-    // ==========================================
+    // Profile upload
     if (type === "profile") {
-      const updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { profilePic: imageUrl },
-        { new: true }
-      );
-
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // NOTE: Removed 'updatedUser.save()' to prevent unnecessary database double-writes.
+      const updatedUser =
+        await User.findByIdAndUpdate(
+          userId,
+          {
+            profilePic: imageUrl,
+          },
+          {
+            new: true,
+          }
+        );
 
       return res.status(200).json({
-        message: "Profile picture updated successfully",
+        message:
+          "Profile updated",
         imageUrl,
         user: updatedUser,
       });
     }
 
-    // ==========================================
-    // CONDITION 2: Handle Chat Gallery Attachment
-    // ==========================================
+    // Chat attachment
     if (type === "attachment") {
       if (!receiverId) {
-        return res.status(400).json({ message: "Receiver ID is required for messages" });
+        return res.status(400).json({
+          message:
+            "receiverId required",
+        });
       }
 
-      // Message.create automatically saves it to the database
-      const newMessage = await Message.create({
-        sender: userId,
-        recipient: receiverId, 
-        text: text || "", // Fixed: 'text' is now safely grabbed from req.body
-        attachments: [
-          {
-            url: imageUrl,
-            fileType: "image",
-          },
-        ],
-      });
+      const newMessage =
+        await Message.create({
+          senderId: userId,
+
+          receiverId,
+
+          text: text || "",
+
+          attachments: [
+            {
+              url: imageUrl,
+
+              fileType: "image",
+
+              publicId:
+                req.file.filename ||
+                "",
+            },
+          ],
+        });
 
       return res.status(201).json({
-        message: "Message attachment uploaded successfully",
+        success: true,
+
         imageUrl,
+
         messageData: newMessage,
       });
     }
 
-    // Fallback if type property is invalid
-    return res.status(400).json({ message: "Invalid upload type specified" });
+    return res.status(400).json({
+      message:
+        "Invalid upload type",
+    });
 
   } catch (error) {
-    console.error("Upload error:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    console.error(
+      "UPLOAD ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Internal Server Error",
+
+      error:
+        error.message,
+    });
   }
 };

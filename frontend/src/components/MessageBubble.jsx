@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import MessageActionsBar from "../components/MessageActionBar";
@@ -6,12 +6,16 @@ import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
 import EmojiPicker from "emoji-picker-react";
 import ReplyPreview from "./ReplyPreview";
+import { PlusIcon } from "lucide-react";
 
 const REPLY_THRESHOLD = 72;
 const MAX_DRAG = 90;
 
+
+
+
 const MessageBubble = ({ message, onEmojiClick, onReply }) => {
-  const { user } = useAuth();
+  const { user, selectedUser } = useAuth();
   const {
     isShowMode, setIsShowMode,
     isSelectMode, setIsSelectMode,
@@ -19,10 +23,18 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
     showPicker, setShowPicker, selectedMsg, setSelectedMsg
   } = useAppContext();
 
+  const [fullView, setFullView] = useState(false);
+
+  const resetEmojiView = () => {
+    setShowPicker(null);
+    setFullView(false);
+  };
+
   if (!message || !message.senderId || !user) return null;
 
   const bubbleRef = useRef(null);
   const actionBarRef = useRef(null);
+  const emojiRef = useRef(null);
   const pressTimer = useRef(null);           // useRef so drag can cancel it
   const replyFired = useRef(false);
 
@@ -31,6 +43,9 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
   const isSelected = Array.isArray(selectedMessageIds)
     ? selectedMessageIds.includes(message._id)
     : selectedMessageIds === message._id;
+
+
+
 
   // ── Motion values ────────────────────────────────────────────────────────────
   const x = useMotionValue(0);
@@ -42,6 +57,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
 
   // ── Click-outside: action bar ────────────────────────────────────────────────
+  // useEffect for handling click-outside to reset selection state
+  // ── Unified Click-outside Logic ───────────────────────────────────────────
   useEffect(() => {
     if (!isShowMode || !isSelected) return;
     const onDown = (e) => {
@@ -55,6 +72,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
     return () => document.removeEventListener("mousedown", onDown);
   }, [isShowMode, isSelected, selectedMessageIds]);
 
+
+
   // ── Click-outside: emoji picker ──────────────────────────────────────────────
   useEffect(() => {
     if (!showPicker) return;
@@ -62,6 +81,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
       if (bubbleRef.current && !bubbleRef.current.contains(e.target)) {
         if (e.target.closest(".emoji-toggle-btn")) return;
         setShowPicker(null);
+        resetEmojiView();
       }
     };
     document.addEventListener("mousedown", onDown);
@@ -118,10 +138,12 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
   };
 
   // ── Long-press (mobile select) ───────────────────────────────────────────────
-  const handlePressStart = () => {
+  const handlePressStart = (message) => {
     pressTimer.current = setTimeout(() => {
       setIsShowMode(false);
       setIsSelectMode(true);
+      console.log("hi")
+      setShowPicker(showPicker === message._id ? null : message._id)
       triggerSelect();
     }, 600);
   };
@@ -180,7 +202,88 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
 
   const isDragEnabled = !isSelectMode;
+  const hasAttachments = message.attachments && message.attachments.length > 0;
 
+  const ImageBubble = ({ message }) => {
+    // Extract attachments, ensuring it's an array to map over.
+    // This component is only called if msg.attachments exists and is not empty.
+    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+
+    return (
+      // The main container provides base styling for the bubble,
+      // including background and alignment based on sender status.
+      <div className="relative max-w-80 flex flex-col gap-3">
+        {/* Attachments Section */}
+        <div className="flex flex-wrap gap-2">
+          {attachments.map((attachment, index) => (
+            <div
+              key={index}
+              className={`relative overflow-hidden rounded-lg ${attachments.length > 1 ? "w-[calc(50%-4px)]" : "w-full"
+                }`}
+            >
+              {attachment.fileType === "image" && (
+                <>
+                  <img
+                    src={attachment.localUrl || attachment.url}
+                    alt={attachment.fileName || `Attachment ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Name who the image send */}
+                  {
+                    !isSent && (
+                      <div className="fixed -top-3 left-2 z-10 bg-[url('https://img.freepik.com/free-vector/blurred-pink-tones-background_1102-31.jpg?semt=ais_hybrid&w=740&q=80')] bg-cover bg-center bg-no-repeat px-2 py-1 rounded-full">
+                        <p className="w-full text-xs font-bold">{selectedUser.name}</p>
+                      </div>
+                    )
+                  }
+
+
+                  {/* Timestamp and Read Receipt Overlay */}
+                  <div className="absolute bottom-2 z-10 right-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-white">
+                    <span className="text-[10px]  ">
+                      {message.createdAt ? format(new Date(message.createdAt), "hh:mm a") : "--:--"}
+                    </span>
+                    {isSent && (
+                      message.read ? (
+                        <svg viewBox="0 0 16 11" height="11" width="16" preserveAspectRatio="xMidYMid meet" className="text-blue-400" fill="none">
+                          <path fill="currentColor" d="M11.0714 0.652832C10.991 0.585124 10.8894 0.55127 10.7667 0.55127C10.6186 0.55127 10.4916 0.610514 10.3858 0.729004L4.19688 8.36523L1.79112 6.09277C1.7488 6.04622 1.69802 6.01025 1.63877 5.98486C1.57953 5.95947 1.51817 5.94678 1.45469 5.94678C1.32351 5.94678 1.20925 5.99544 1.11192 6.09277L0.800883 6.40381C0.707784 6.49268 0.661235 6.60482 0.661235 6.74023C0.661235 6.87565 0.707784 6.98991 0.800883 7.08301L3.79698 10.0791C3.94509 10.2145 4.11224 10.2822 4.29844 10.2822C4.40424 10.2822 4.5058 10.259 4.60313 10.2124C4.70046 10.1659 4.78086 10.1003 4.84434 10.0156L11.4903 1.59863C11.5623 1.5013 11.5982 1.40186 11.5982 1.30029C11.5982 1.14372 11.5348 1.01888 11.4078 0.925781L11.0714 0.652832ZM8.6212 8.32715C8.43077 8.20866 8.2488 8.09017 8.0753 7.97168C7.99489 7.89128 7.8891 7.85107 7.75791 7.85107C7.6098 7.85107 7.4892 7.90397 7.3961 8.00977L7.10411 8.33984C7.01947 8.43717 6.97715 8.54508 6.97715 8.66357C6.97715 8.79476 7.0237 8.90902 7.1168 9.00635L8.1959 10.0791C8.33132 10.2145 8.49636 10.2822 8.69102 10.2822C8.79681 10.2822 8.89838 10.259 8.99571 10.2124C9.09304 10.1659 9.17556 10.1003 9.24327 10.0156L15.8639 1.62402C15.9358 1.53939 15.9718 1.43994 15.9718 1.32568C15.9718 1.1818 15.9125 1.05697 15.794 0.951172L15.4386 0.678223C15.3582 0.610514 15.2587 0.57666 15.1402 0.57666C14.9964 0.57666 14.8715 0.635905 14.7657 0.754395L8.6212 8.32715Z" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 12 10" height="11" width="16" preserveAspectRatio="xMidYMid meet" fill="none">
+                          <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="1.5" fill="none" stroke="white" d="M1 5l3 3 6-6" />
+                        </svg>
+                      )
+                    )}
+                  </div>
+
+                  {/* Upload Overlay */}
+
+                  {message.pending && (
+
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+
+                      <div className="relative">
+
+                        <div className="w-14 h-14 rounded-full border-4 border-white/20"></div>
+
+                        <div className="absolute inset-0 w-14 h-14 rounded-full border-4 border-transparent border-t-white animate-spin"></div>
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
 
   return (
@@ -200,10 +303,10 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       /* ── Press / context on the same element ── */
-      onMouseDown={handlePressStart}
+      onMouseDown={() => handlePressStart(message)}
       onMouseUp={handlePressEnd}
       onMouseLeave={handlePressEnd}
-      onTouchStart={handlePressStart}
+      onTouchStart={() => handlePressStart(message)}
       onTouchEnd={handlePressEnd}
       onContextMenu={handleContextMenu}
       onClick={handleRowClick}
@@ -244,7 +347,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           id={`select-${message._id}`}
           checked={isSelected}
           onChange={(e) => { e.stopPropagation(); handleToggleSelectMessage(message); }}
-          className="w-4 h-4 rounded text-green-600 focus:ring-green-500 cursor-pointer accent-green-600 transition-all duration-300 scale-110 animate-bubble-pop shrink-0"
+          className="invisible md:block w-4 h-4 rounded text-green-600 focus:ring-green-500 cursor-pointer accent-green-600 transition-all duration-300 scale-110 animate-bubble-pop shrink-0"
         />
       )}
 
@@ -252,7 +355,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
       {isShowMode && isSelected && (
         <div
           ref={actionBarRef}
-          className={`absolute -top-10 z-99 ${isSent ? "left-auto right-0" : "left-1/2 -translate-x-1/2"}`}
+          className={`absolute -top-10 z-99 ${isSent ? "left-auto right-0" : "left-2"}`}
         >
           <MessageActionsBar messageId={message._id} handledelete={handledelete} />
         </div>
@@ -296,10 +399,15 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
 
         <div className={`
-  relative overflow-visible ${message.replyingTo ? "p-px" : "px-6 py-1"} flex flex-col 
-  text-[15px] font-medium rounded-[14px] transition-all duration-300
+  relative overflow-visible flex flex-col gap-1 text-[15px] font-medium rounded-[14px] transition-all duration-300
+  ${message.replyingTo
+            ? "p-0.5"
+            : hasAttachments
+              ? "p-1"
+              : "ps-5 pt-1 pe-3"
+          }
   ${isSent
-            ? "bg-chat-panel text-[#1A1A1A] rounded-br-md after:absolute after:bottom-0 after:-right-1.5 after:w-0 after:h-0 after:border-l-8 after:border-l-chat-panel after:border-t-8 after:border-t-transparent"
+            ? "bg-chat-panel bg-[url('https://img.magnific.com/free-vector/elegant-gradient-background_1340-3948.jpg?semt=ais_hybrid&w=740&q=80')] opacity-90 bg-cover bg-center bg-no-repeat text-[#1A1A1A] rounded-br-xs after:absolute after:bottom-0 after:-right-2 after:w-0 after:h-0 after:border-l-9 after:border-l-[#600307] after:border-t-8 after:border-t-transparent"
             : "bg-chat-surface text-[#2B2B2B] rounded-bl-md before:absolute before:bottom-0 before:-left-1.5 before:w-0 before:h-0 before:border-r-8 before:border-r-chat-surface before:border-t-8 before:border-t-transparent"
           }
 `}>
@@ -317,27 +425,39 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
           }
 
+          {
+            hasAttachments ? (
+              <ImageBubble message={message} />
+            ) : (
+              <p className={`text-sm ${message.replyingTo ? "ps-3 pe-3" : ""}  leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-white" : "text-chat-text"}`}>
+                {message.text}
+              </p>
+            )
+          }
 
-          <p className={`text-sm ${message.replyingTo ? "ps-3 pe-3" : ""}  leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-gray-900" : "text-chat-text"}`}>
-            {message.text}
-          </p>
+          {/*  timestamp + read eg: 03:30 PM  */}
+          {
+            !hasAttachments && (
+              <div className={`flex items-center gap-1 mb-2 justify-end ${message.replyingTo ? "px-2 pb-1" : ""}`}>
+                <span className={`text-[10px] ${isSent ? "text-white/90" : "text-black"}`}>
+                  {message.createdAt ? format(new Date(message.createdAt), "hh:mm a") : "--:--"}
+                </span>
+                {isSent && (
+                  message.read ? (
+                    <svg viewBox="0 0 16 11" height="11" width="16" preserveAspectRatio="xMidYMid meet" className="text-blue-500" fill="none">
+                      <path fill="currentColor" d="M11.0714 0.652832C10.991 0.585124 10.8894 0.55127 10.7667 0.55127C10.6186 0.55127 10.4916 0.610514 10.3858 0.729004L4.19688 8.36523L1.79112 6.09277C1.7488 6.04622 1.69802 6.01025 1.63877 5.98486C1.57953 5.95947 1.51817 5.94678 1.45469 5.94678C1.32351 5.94678 1.20925 5.99544 1.11192 6.09277L0.800883 6.40381C0.707784 6.49268 0.661235 6.60482 0.661235 6.74023C0.661235 6.87565 0.707784 6.98991 0.800883 7.08301L3.79698 10.0791C3.94509 10.2145 4.11224 10.2822 4.29844 10.2822C4.40424 10.2822 4.5058 10.259 4.60313 10.2124C4.70046 10.1659 4.78086 10.1003 4.84434 10.0156L11.4903 1.59863C11.5623 1.5013 11.5982 1.40186 11.5982 1.30029C11.5982 1.14372 11.5348 1.01888 11.4078 0.925781L11.0714 0.652832ZM8.6212 8.32715C8.43077 8.20866 8.2488 8.09017 8.0753 7.97168C7.99489 7.89128 7.8891 7.85107 7.75791 7.85107C7.6098 7.85107 7.4892 7.90397 7.3961 8.00977L7.10411 8.33984C7.01947 8.43717 6.97715 8.54508 6.97715 8.66357C6.97715 8.79476 7.0237 8.90902 7.1168 9.00635L8.1959 10.0791C8.33132 10.2145 8.49636 10.2822 8.69102 10.2822C8.79681 10.2822 8.89838 10.259 8.99571 10.2124C9.09304 10.1659 9.17556 10.1003 9.24327 10.0156L15.8639 1.62402C15.9358 1.53939 15.9718 1.43994 15.9718 1.32568C15.9718 1.1818 15.9125 1.05697 15.794 0.951172L15.4386 0.678223C15.3582 0.610514 15.2587 0.57666 15.1402 0.57666C14.9964 0.57666 14.8715 0.635905 14.7657 0.754395L8.6212 8.32715Z" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 12 10" height="11" width="16" preserveAspectRatio="xMidYMid meet" fill="none">
+                      <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="1.5" fill="none" stroke="white" d="M1 5l3 3 6-6" />
+                    </svg>
+                  )
+                )}
+              </div>
+            )
+          }
 
-          <div className={`flex items-center gap-1 mt-0.5 justify-end ${message.replyingTo ? "px-2 pb-1" : ""}`}>
-            <span className="text-[10px] text-chat-muted">
-              {message.createdAt ? format(new Date(message.createdAt), "hh:mm a") : "--:--"}
-            </span>
-            {isSent && (
-              message.read ? (
-                <svg viewBox="0 0 16 11" height="11" width="16" preserveAspectRatio="xMidYMid meet" className="text-blue-500" fill="none">
-                  <path fill="currentColor" d="M11.0714 0.652832C10.991 0.585124 10.8894 0.55127 10.7667 0.55127C10.6186 0.55127 10.4916 0.610514 10.3858 0.729004L4.19688 8.36523L1.79112 6.09277C1.7488 6.04622 1.69802 6.01025 1.63877 5.98486C1.57953 5.95947 1.51817 5.94678 1.45469 5.94678C1.32351 5.94678 1.20925 5.99544 1.11192 6.09277L0.800883 6.40381C0.707784 6.49268 0.661235 6.60482 0.661235 6.74023C0.661235 6.87565 0.707784 6.98991 0.800883 7.08301L3.79698 10.0791C3.94509 10.2145 4.11224 10.2822 4.29844 10.2822C4.40424 10.2822 4.5058 10.259 4.60313 10.2124C4.70046 10.1659 4.78086 10.1003 4.84434 10.0156L11.4903 1.59863C11.5623 1.5013 11.5982 1.40186 11.5982 1.30029C11.5982 1.14372 11.5348 1.01888 11.4078 0.925781L11.0714 0.652832ZM8.6212 8.32715C8.43077 8.20866 8.2488 8.09017 8.0753 7.97168C7.99489 7.89128 7.8891 7.85107 7.75791 7.85107C7.6098 7.85107 7.4892 7.90397 7.3961 8.00977L7.10411 8.33984C7.01947 8.43717 6.97715 8.54508 6.97715 8.66357C6.97715 8.79476 7.0237 8.90902 7.1168 9.00635L8.1959 10.0791C8.33132 10.2145 8.49636 10.2822 8.69102 10.2822C8.79681 10.2822 8.89838 10.259 8.99571 10.2124C9.09304 10.1659 9.17556 10.1003 9.24327 10.0156L15.8639 1.62402C15.9358 1.53939 15.9718 1.43994 15.9718 1.32568C15.9718 1.1818 15.9125 1.05697 15.794 0.951172L15.4386 0.678223C15.3582 0.610514 15.2587 0.57666 15.1402 0.57666C14.9964 0.57666 14.8715 0.635905 14.7657 0.754395L8.6212 8.32715Z" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 12 10" height="11" width="16" preserveAspectRatio="xMidYMid meet" fill="none">
-                  <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" fill="none" stroke="#4a5568" d="M1 5l3 3 6-6" />
-                </svg>
-              )
-            )}
-          </div>
+
         </div>
 
         {message.reactions?.length > 0 && (
@@ -358,16 +478,61 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
       {/* ── Emoji Picker ──────────────────────────────────────────────────── */}
       {showPicker === message._id && (
-        <div className="flex emoji-toggle-btn items-center justify-center">
-          <EmojiPicker
-            onEmojiClick={(emoji) => onEmojiClick(message._id, emoji)}
-            autoFocusSearch={false}
-            theme="light"
-            width={320}
-            height={350}
-            skinTonesDisabled
-            searchPlaceHolder="Search reactions..."
-          />
+        <div className="emoji-toggle-btn ">
+
+          {/* Compact Recent Emojis */}
+          {!fullView && (
+            <div ref={emojiRef} className="flex items-center gap-2 z-10 px-2 py-1 bg-chat-muted rounded-lg">
+              {["👍", "❤️", "😂", "😮", "😢", "🙏"].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() =>
+                    onEmojiClick(message._id, { emoji })
+                  }
+                  className="text-xl hover:scale-125 transition-transform"
+                >
+                  {emoji}
+                </button>
+              ))}
+
+              {/* Expand Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFullView(true);
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-lg font-bold"
+              >
+                <PlusIcon />
+              </button>
+            </div>
+          )}
+
+          {/* Full Emoji Picker */}
+          {fullView && (
+            <div ref={emojiRef} className="relative ">
+              <EmojiPicker
+                onEmojiClick={(e) => {
+                  onEmojiClick(message._id, e);
+                  resetEmojiView();
+                }}
+                width={320}
+                height={350}
+                theme="light"
+              />
+
+              {/* Collapse Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFullView(false);
+                }}
+                className="absolute -top-3 -right-2.5 w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       )}
 

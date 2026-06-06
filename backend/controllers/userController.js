@@ -10,9 +10,17 @@ export const getUsers = async (req, res) => {
       .sort({ isOnline: -1, name: 1 });
 
     res.json(users);
-  } catch (error) {
-    console.error("Get users error:", error);
-    res.status(500).json({ message: "Server error fetching users" });
+  } catch (err) {
+    console.error("Get Users Error:", err);
+
+    // Handle specific MongoDB network errors
+    if (err.name === 'MongoNetworkError' || err.code === 'ECONNRESET') {
+      return res.status(503).json({
+        message: "Database service is temporarily unavailable. Please try again later."
+      });
+    }
+
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 

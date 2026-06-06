@@ -15,7 +15,7 @@ const messageSchema = new mongoose.Schema(
     },
     text: {
       type: String,
-      required: [true, "Message text is required"],
+      required:false,
       trim: true,
       maxlength: [2000, "Message cannot exceed 2000 characters"],
     },
@@ -43,6 +43,7 @@ const messageSchema = new mongoose.Schema(
       _id: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
       userId : {type : mongoose.Schema.Types.ObjectId, ref: 'User' }, 
       text: { type: String },
+      image: {type: String}
     },
     reactions: [
       {

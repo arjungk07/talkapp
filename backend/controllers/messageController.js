@@ -50,6 +50,7 @@ const getMessages = async (req, res) => {
 const sendMessage = async (req, res) => {
   try {
     const { receiverId, text, isActive, replyingTo } = req.body;
+    console.log(replyingTo);
     const senderId = req.user._id;
 
 
@@ -69,6 +70,7 @@ const sendMessage = async (req, res) => {
         _id: replyingTo._id,
         userId: senderId,
         text: replyingTo.text,
+        image:replyingTo.image
       } : null,
     });
 

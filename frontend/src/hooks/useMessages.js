@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
+import imageCompression from "browser-image-compression";
 import api from "../utils/api";
 
 export const useMessages = (selectedUser) => {
@@ -32,7 +33,7 @@ export const useMessages = (selectedUser) => {
     setIsTyping(false);
   }, [fetchMessages]);
 
-// -----------------------------------------------------------------
+  // -----------------------------------------------------------------
   // 1. WATCH REAL-TIME LISTENER FOR NEW INCOMING MESSAGES (Your modified block)
   // -----------------------------------------------------------------
   useEffect(() => {
@@ -111,6 +112,29 @@ export const useMessages = (selectedUser) => {
     return () => socket.off("messagesMarkedAsRead", handleMessagesReadByRecipient);
   }, [socket, selectedUser]);
 
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleImageSend = (messageData) => {
+
+      setMessages((prev) => {
+        const exists = prev.some(
+          (msg) => msg._id === messageData._id
+        );
+
+        if (exists) return prev;
+
+        return [...prev, messageData];
+      });
+    };
+
+    socket.on("receiveImage", handleImageSend);
+
+    return () => {
+      socket.off("receiveImage", handleImageSend);
+    };
+  }, [socket]);
 
 
   // Listen for deletion updates from the server
@@ -212,6 +236,155 @@ export const useMessages = (selectedUser) => {
     }
   };
 
+
+  const uploadImage = async (formData, setImageTo) => {
+    let localImageUrl = null;
+
+    try {
+      const originalFile = formData.get("file");
+
+      if (!originalFile) return;
+
+      // Only images allowed
+      if (!originalFile.type.startsWith("image/")) {
+        alert("Only images are allowed");
+        return;
+      }
+
+      // Local preview
+      localImageUrl = URL.createObjectURL(originalFile);
+
+      const tempId = `temp-${Date.now()}`;
+
+      const tempMessage = {
+        _id: tempId,
+        senderId: user._id,
+        receiverId: selectedUser._id,
+        text: "",
+
+        attachments: [
+          {
+            _id: tempId,
+            localUrl: localImageUrl,
+            url: null,
+            fileType: "image",
+            publicId: null,
+          },
+        ],
+
+        deleteforme: [],
+        role: "user",
+        read: false,
+        isAi: false,
+        reactions: [],
+
+        pending: true,
+        uploadProgress: 0,
+
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setMessages(prev => [...prev, tempMessage]);
+
+      setImageTo?.(false);
+
+      // Compress image
+      const compressedFile = await imageCompression(
+        originalFile,
+        {
+          maxSizeMB: 0.5,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        }
+      );
+
+      // Create fresh FormData
+      const uploadFormData = new FormData();
+
+      uploadFormData.append(
+        "file",
+        compressedFile,
+        originalFile.name
+      );
+
+      uploadFormData.append(
+        "userId",
+        formData.get("userId")
+      );
+
+      uploadFormData.append(
+        "receiverId",
+        formData.get("receiverId")
+      );
+
+      uploadFormData.append(
+        "type",
+        formData.get("type")
+      );
+
+      uploadFormData.append(
+        "text",
+        formData.get("text") || ""
+      );
+
+      let lastPercent = 0;
+
+
+      const res = await api.post("/api/uploadMedia", uploadFormData);
+
+      const { messageData } = res.data;
+
+      setMessages(prev =>
+        prev.map(msg => {
+          if (msg._id !== tempId) return msg;
+
+          return {
+            ...msg,
+
+            _id: messageData._id,
+
+            pending: false,
+
+            uploadProgress: 100,
+
+            createdAt:
+              messageData.createdAt,
+
+            updatedAt:
+              messageData.updatedAt,
+
+            attachments: [
+              {
+                ...messageData.attachments[0],
+
+                localUrl:
+                  localImageUrl,
+              },
+            ],
+          };
+        })
+      );
+
+      socket?.emit(
+        "sendImage",
+        messageData
+      );
+
+    } catch (error) {
+      console.error(error);
+
+      setMessages(prev =>
+        prev.filter(
+          msg => !msg._id.startsWith("temp-")
+        )
+      );
+    } finally {
+      setImageTo?.(false);
+      setSending?.(false);
+    }
+  };
+
   // EMOJI REACTION FUNCTIONS 
   const sendReaction = async (messageId, emoji) => {
     if (!socket || !selectedUser || !messageId) return;
@@ -287,11 +460,13 @@ export const useMessages = (selectedUser) => {
   return {
     messages,
     loading,
+    setLoading,
     sending,
     setSending,
     isTyping,
     setMessages,
     sendMessage,
+    uploadImage,
     sendReaction, // Added to return properties
     emitTyping,
     emitStopTyping,

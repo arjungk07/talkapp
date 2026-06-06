@@ -102,7 +102,7 @@ const ChatHeader = () => {
 
 
     const isOnline = selectedUser ? onlineUsers.includes(selectedUser._id) : false;
-
+    const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
 
 
     return (
@@ -113,10 +113,21 @@ const ChatHeader = () => {
                 {/* user profile  */}
                 <div className="relative">
                     {selectedUser.profilePic ? (
+                        // <img
+                        //     src={selectedUser.profilePic}
+                        //     alt={selectedUser.name}
+                        //     className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                        // />
                         <img
-                            src={selectedUser.profilePic}
-                            alt={selectedUser.name}
-                            className="w-11 h-11 rounded-full bg-chat-surface border border-chat-border"
+                            src={selectedUser.profilePic || DEFAULT_AVATAR}
+                            alt="selectedUser.name"
+                            className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                            onError={(e) => {
+                                // 1. Prevent the error from trying to load again
+                                e.target.onerror = null;
+                                // 2. Point the source to the fallback image
+                                e.target.src = DEFAULT_AVATAR;
+                            }}
                         />
                     ) : (
                         <FaUserAlt className="w-11 h-11 p-1 rounded-full bg-chat-surface text-chat-muted border border-chat-border" />

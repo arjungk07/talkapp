@@ -1,4 +1,5 @@
 import axios from "axios";
+import { navigateTo } from "./navigationService";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_BACKEND_API_URL || "http://localhost:5000",
@@ -23,13 +24,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+
 // Handle 401 globally
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("talkapp-user");
-      window.location.href = "/";
+      navigateTo('/')
     }
     return Promise.reject(err);
   }

@@ -34,12 +34,21 @@ export const AppContextProvider = ({ children }) => {
             console.log("Data received from backend:", data);
             setUsers(data); // 👈 Directly populating the main state
         } catch (err) {
-            if (err.response?.status === 401) {
+            // 1. Check for offline status first
+            if (!navigator.onLine) {
+                console.log("offline")
+                toast.error("You are currently offline. Please check your internet connection.");
+            }
+            // 2. Handle specific status codes
+            else if (err.response?.status === 401) {
                 console.log("Unauthorized request inside context. Stopping loop.");
                 window.location.href = '/';
-            } else {
+            }
+            // 4. Default error handling
+            else {
                 toast.error("Failed to sync initial system records.");
             }
+
             console.error(err.message);
         } finally {
             setAppLoading(false);

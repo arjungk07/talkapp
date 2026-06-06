@@ -285,6 +285,8 @@ export function EditProfile() {
     const baseImage = user?.profilePic;
     const userProfileImage = baseImage ? `${baseImage}?t=${new Date().getTime()}` : "";
 
+    const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
+
     // 2. Global outside click controller listener hook
     useEffect(() => {
         const handleOutsideClick = (event) => {
@@ -302,10 +304,14 @@ export function EditProfile() {
     }, [mediaDropdown]);
 
     const handleUploadImage = async (file) => {
+        console.log(file)
         const formData = new FormData();
         formData.append("file", file);
         formData.append("type", "profile");
         formData.append("userId", user?._id);
+
+
+        console.log("Form Data in setting page", formData);
 
         try {
             setLoading(true);
@@ -447,9 +453,15 @@ export function EditProfile() {
                                             </div>
                                         )}
                                         <img
-                                            src={userProfileImage}
-                                            alt="profile"
-                                            className="h-full w-full rounded-full object-cover border-4 border-gray-100"
+                                            src={userProfileImage || DEFAULT_AVATAR}
+                                            alt="Profile"
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                            onError={(e) => {
+                                                // 1. Prevent the error from trying to load again
+                                                e.target.onerror = null;
+                                                // 2. Point the source to the fallback image
+                                                e.target.src = DEFAULT_AVATAR;
+                                            }}
                                         />
                                     </div>
                                 ) : (
@@ -559,6 +571,8 @@ const Setting = () => {
         ? `${baseImage}?t=${new Date().getTime()}`
         : "";
 
+    const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
+
     return (
         <>
 
@@ -600,9 +614,15 @@ const Setting = () => {
                         >
                             {userProfileImage ? (
                                 <img
-                                    src={userProfileImage}
-                                    alt="profile"
-                                    className="w-12 h-12 object-cover rounded-full"
+                                    src={u.profilePic || DEFAULT_AVATAR}
+                                    alt="Profile"
+                                    className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                                    onError={(e) => {
+                                        // 1. Prevent the error from trying to load again
+                                        e.target.onerror = null;
+                                        // 2. Point the source to the fallback image
+                                        e.target.src = DEFAULT_AVATAR;
+                                    }}
                                 />
                             ) : (
                                 <div className='flex items-center justify-center'>

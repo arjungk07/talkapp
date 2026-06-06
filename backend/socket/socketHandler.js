@@ -67,6 +67,17 @@ export const initSocket = (io) => {
       }
     });
 
+    // Send image
+    socket.on("sendImage", (messageData) => {
+
+      const receiverSocketId = getReceiverSocketId(messageData.receiverId);
+
+      if (receiverSocketId) {
+        io.to(receiverSocketId)
+          .emit("receiveImage", messageData);
+      }
+    });
+
     // 👉 BACKEND ON FUNCTION: Listens for the frontend trigger
 
     socket.on("markMessagesAsRead", async ({ chatUserId, currentUserId }) => {

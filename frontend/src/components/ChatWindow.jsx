@@ -11,6 +11,8 @@ import ReplyPreview from "./ReplyPreview";
 import { Keyboard } from "lucide-react";
 import { format, set } from "date-fns";
 import { UploadBar, DeleteMessagePopup, DeleteAction } from "./ActionBars";
+import api from "../utils/api";
+import toast from "react-hot-toast";
 
 
 
@@ -29,7 +31,7 @@ const ChatWindow = () => {
     setShowPicker,
   } = useAppContext();
 
-  const { messages, loading, sending, setSending, isTyping, sendMessage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
+  const { messages, loading,  sending, setSending, isTyping, sendMessage, uploadImage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
   const [DeleteModel, setDeleteModel] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null); // reply state
   const [imageTo, setimageTo] = useState(null);
@@ -138,26 +140,7 @@ const ChatWindow = () => {
     });
   };
 
-  // const uploadImage = async (formData) => {
-  //   console.log("file uploaded");
-  //   setimageTo(false);
 
-  //   try {
-  //     setLoading(true);
-  //     const res = await api.post("/api/upload-profile", formData);
-  //     const data = res.data;
-  //     console.log(data);
-
-  //     setimageTo(data.imageUrl);
-
-  //     console.log("image",imageTo)
-
-  //   } catch (err) {
-  //     toast.error("Upload failed!");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
 
   const handleSend = async (e) => {
@@ -170,7 +153,7 @@ const ChatWindow = () => {
       setSending(true);
 
       if (imageTo && imageTo.formData) {
-        await uploadImage(imageTo.formData);
+        await uploadImage(imageTo.formData,setimageTo);
       }
 
       clearTimeout(typingTimeoutRef.current);
@@ -179,7 +162,7 @@ const ChatWindow = () => {
       await sendMessage(
         text,
         isActive,
-        replyingTo ? { _id: replyingTo._id, text: replyingTo.text } : null
+        replyingTo ? { _id: replyingTo._id, text: replyingTo.text, image:replyingTo?.attachments?.[0]?.url} : null
       );
 
       // Clear inputs and states on success
@@ -285,9 +268,11 @@ const ChatWindow = () => {
       setShowPicker(null);
       await sendReaction(messageId, emoji.emoji);
 
-
     } catch (error) {
       console.log(error);
+    }
+    finally{
+      setIsSelectMode(false);
     }
   }
 
@@ -319,9 +304,6 @@ const ChatWindow = () => {
 
 
 
-
-
-
   return (
 
     <div className={`relative flex flex-col w-full h-dvh overflow-hidden bg-chat-bg`}  >
@@ -346,7 +328,7 @@ const ChatWindow = () => {
 
 
 
-        {loading ? (
+        {loading  ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />

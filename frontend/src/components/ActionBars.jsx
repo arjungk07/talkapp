@@ -29,7 +29,6 @@ export function UploadBar({ value }) {
 
 
     const handleFileChange = async (e) => {
-        console.log("enter")
         const file = e.target.files[0];
         if (!file) return;
 
@@ -38,13 +37,12 @@ export function UploadBar({ value }) {
 
         let formData = new FormData();
         formData.append("file", file);
-        formData.append("type", "attachment")
+        formData.append("type", "attachment");
         formData.append("userId", user._id);
-        formData.append("receiverId", selectedUser?._id)
+        formData.append("receiverId", selectedUser?._id);
+        formData.append("text", "");
 
-        formData = Object.fromEntries(formData.entries());
 
-        console.log(formData)
 
 
         setimageTo(
@@ -60,34 +58,17 @@ export function UploadBar({ value }) {
 
     };
 
-    const uploadImage = async (formData) => {
-        console.log("file uploaded")
-        try {
-            setLoading(true);
-            const res = await api.post("/api/uploadMedia", formData);
-            const data = res.data;
-
-            setimageTo(data.imageUrl);
 
 
-
-            toast.success("Media Updated!");
-        } catch (err) {
-            toast.error("Media Upload failed!");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-    if (!open) return null;
     const fileRef = useRef(null);
+    if (!open) return null;
+
 
 
     // Configuration for clean dynamic rendering of items
     const menuItems = [
-        { label: 'Photos & videos', icon: <PhotosIcon />, color: 'text-pink-500', onclick: () => fileRef.current.click() },
-        { label: 'Camera', icon: <CameraIcon />, color: 'text-red-500' },
+        { label: 'Photos', icon: <PhotosIcon />, color: 'text-pink-500', onclick: () => fileRef.current.click() },
+        // { label: 'Camera', icon: <CameraIcon />, color: 'text-red-500' },
 
     ];
 
@@ -261,11 +242,11 @@ export function DeleteMessagePopup({ value }) {
 
 // Delte Action bar 
 export function DeleteAction({ value }) {
-      
 
-    const {handleCancelSelectMode , DeleteModel} = value
 
-    const {selectedMessageIds } = useAppContext();
+    const { handleCancelSelectMode, DeleteModel } = value
+
+    const { selectedMessageIds } = useAppContext();
 
     return (
         <div className="flex items-center gap-4 w-full px-4 py-1.5 animate-fade-in">

@@ -3,14 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
 import toast from "react-hot-toast";
-import { Eye, EyeOff } from 'lucide-react'; // Using Lucide to match Signup
+import { Eye, EyeOff, Network } from 'lucide-react'; // Using Lucide to match Signup
 import logo from '../assets/image/logo1.png';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-  username: '',   // rename to match
-  password: ''
-});
+    username: '',   // rename to match
+    password: ''
+  });
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (!formData.username || !formData.password) {
       toast.error("Please fill in all fields");
@@ -40,9 +41,22 @@ const Login = () => {
       navigate("/");
     } catch (err) {
       console.error("Login err:", err);
-      const errorMsg =
-        err.response?.data?.message ||
-        "Please check your credentials";
+
+      // 1. Check offline status first
+      if (!navigator.onLine) {
+        toast.error("Please check your internet connection.");
+        return; // Exit here so we don't show the second error message
+      }
+
+      // 2. Handle specific network/database errors (like ECONNRESET)
+      // If the server responded with 503 or 500, we show a generic friendly message
+      if (err.response?.status === 500 || err.response?.status === 503) {
+        toast.error("Server is temporarily unavailable. Please try again later.");
+        return;
+      }
+
+      // 3. Fallback for validation or authentication errors
+      const errorMsg = err.response?.data?.message || "Please check your credentials";
       toast.error(errorMsg);
     } finally {
       setLoading(false);

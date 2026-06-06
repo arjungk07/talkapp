@@ -11,7 +11,7 @@ import { useAppContext } from "../context/AppContext";
 const Sidebar = ({ className }) => {
   const { onlineUsers, selectedUser, setSelectedUser } = useAuth();
   const { users } = useAppContext(); // 👈 Purely read users from context now
-  console.log("sideBar users",users)
+  console.log("sideBar users", users)
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
@@ -20,17 +20,18 @@ const Sidebar = ({ className }) => {
   // --- Local Filtering & Search ---
   const filteredUsers = Array.isArray(users)
     ? users.filter((u) =>
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase())
-      )
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
+    )
     : [];
 
   const isOnline = (userId) => onlineUsers.includes(userId);
+  const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
 
   const handleSelectUser = (u) => {
     setSelectedUser(u);
     navigate(`/chat/${u._id}`);
-    toast.success(`Chatting with ${u.name}`, { id: "user-select-toast" });
+    // toast.success(`Chatting with ${u.name}`, { id: "user-select-toast" });
   };
 
   return (
@@ -76,14 +77,22 @@ const Sidebar = ({ className }) => {
                 type="button"
                 key={u._id}
                 onClick={() => handleSelectUser(u)}
-                className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${
-                  selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
-                }`}
+                className={`w-full flex items-center cursor-pointer gap-4 p-3 rounded-xl mb-1 text-left transition-all ${selectedUser?._id === u._id ? "bg-chat-surface" : "hover:bg-chat-surface"
+                  }`}
               >
                 <div className="relative shrink-0">
                   {u.profilePic ? (
-                    <img src={u.profilePic} alt="" className="w-12 h-12 rounded-full object-cover border border-chat-border" />
-                  ) : (
+                    <img
+                      src={u.profilePic || DEFAULT_AVATAR}
+                      alt="Profile"
+                      className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                      onError={(e) => {
+                        // 1. Prevent the error from trying to load again
+                        e.target.onerror = null;
+                        // 2. Point the source to the fallback image
+                        e.target.src = DEFAULT_AVATAR;
+                      }}
+                    />) : (
                     <FaUserAlt className="w-12 h-12 p-2 rounded-full bg-chat-surface text-chat-muted border border-chat-border" />
                   )}
                   {isOnline(u._id) && (
@@ -111,8 +120,8 @@ const Sidebar = ({ className }) => {
                     {isOnline(u._id)
                       ? "Active now"
                       : u.lastSeen
-                      ? `Seen ${formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true })}`
-                      : "Offline"}
+                        ? `Seen ${formatDistanceToNow(new Date(u.lastSeen), { addSuffix: true })}`
+                        : "Offline"}
                   </p>
                 </div>
               </button>

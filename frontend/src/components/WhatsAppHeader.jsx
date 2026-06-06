@@ -9,7 +9,7 @@ import api from '../utils/api';
 import LogOut from '../components/LogOut';
 import { FiLogOut } from "react-icons/fi";
 import { useAppContext } from '../context/AppContext';
-import { Link} from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 
 
@@ -73,16 +73,15 @@ export function Profile() {
 
                         {userProfileImage ? (
                             <img
-                                src={userProfileImage}
-                                alt="profile"
-                                className="
-            w-full
-            h-full
-            object-cover
-            group-hover:scale-110
-            transition-transform
-            duration-300
-          "
+                                src={userProfileImage || DEFAULT_AVATAR}
+                                alt="Profile"
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                onError={(e) => {
+                                    // 1. Prevent the error from trying to load again
+                                    e.target.onerror = null;
+                                    // 2. Point the source to the fallback image
+                                    e.target.src = DEFAULT_AVATAR;
+                                }}
                             />
                         ) : (
                             <CgProfile
