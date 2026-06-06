@@ -317,7 +317,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           ? `flex-col-reverse ${isSent ? "items-end" : "items-start"} xl:flex-row xl:items-center`
           : ""}
         ${isSelectMode
-          ? `p-2 rounded-xl ${isSent ? "justify-between!" : ""} bg-gray-50/50 hover:bg-green-50/60 active:scale-[0.99]`
+          ? `rounded-xl ${isSent ? "justify-between!" : ""} bg-gray-50/50 hover:bg-green-50/60 active:scale-[0.99]`
           : ""}
         ${isSelectMode && isSelected ? "bg-green-100/50 hover:bg-green-100/70" : ""}
       `}
@@ -461,7 +461,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
         </div>
 
         {message.reactions?.length > 0 && (
-          <div className="flex gap-1 z-10 -mt-2 px-2 animate-in zoom-in-95 duration-100">
+          <div className={`flex gap-1 z-10 ${isSent ? "-mt-2 " : "-mt-3"}  px-2 " data-aos="zoom-in" data-aos-duration="300`}>
             <div className="flex items-center gap-1.5 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 px-2 py-0.5 rounded-full text-xs">
               <span className="flex items-center gap-0.5">
                 {[...new Set(message.reactions.map((r) => r.emoji))].map((emoji, idx) => (

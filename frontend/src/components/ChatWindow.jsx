@@ -31,7 +31,7 @@ const ChatWindow = () => {
     setShowPicker,
   } = useAppContext();
 
-  const { messages, loading,  sending, setSending, isTyping, sendMessage, uploadImage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
+  const { messages, loading, sending, setSending, isTyping, sendMessage, uploadImage, deleteMessages, sendReaction, emitTyping, emitStopTyping } = useMessages(selectedUser);
   const [DeleteModel, setDeleteModel] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null); // reply state
   const [imageTo, setimageTo] = useState(null);
@@ -131,7 +131,7 @@ const ChatWindow = () => {
   }, [messages, isTyping, text]);
 
 
-  
+
 
   const scrollToBottom = () => {
 
@@ -153,7 +153,7 @@ const ChatWindow = () => {
       setSending(true);
 
       if (imageTo && imageTo.formData) {
-        await uploadImage(imageTo.formData,setimageTo);
+        await uploadImage(imageTo.formData, setimageTo);
       }
 
       clearTimeout(typingTimeoutRef.current);
@@ -162,7 +162,7 @@ const ChatWindow = () => {
       await sendMessage(
         text,
         isActive,
-        replyingTo ? { _id: replyingTo._id, text: replyingTo.text, image:replyingTo?.attachments?.[0]?.url} : null
+        replyingTo ? { _id: replyingTo._id, text: replyingTo.text, image: replyingTo?.attachments?.[0]?.url } : null
       );
 
       // Clear inputs and states on success
@@ -265,15 +265,14 @@ const ChatWindow = () => {
 
     try {
       // Close the open picker panel
+      setIsSelectMode(false);
       setShowPicker(null);
       await sendReaction(messageId, emoji.emoji);
 
     } catch (error) {
       console.log(error);
     }
-    finally{
-      setIsSelectMode(false);
-    }
+
   }
 
   // Called from MessageBubble when user swipes to reply
@@ -282,6 +281,9 @@ const ChatWindow = () => {
     // Focus the input so user can start typing immediately
     requestAnimationFrame(() => inputRef.current?.focus());
   };
+
+
+
 
 
   // No user selected — only visible on desktop (parent hides this on mobile)
@@ -328,7 +330,7 @@ const ChatWindow = () => {
 
 
 
-        {loading  ? (
+        {loading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />

@@ -429,10 +429,10 @@ export function EditProfile() {
             />
 
             <div className='md:flex'>
-                <div className="min-h-screen bg-white md:min-w-87.5 text-gray-900 relative" data-aos="fade-up" data-aos-duration="500">
+                <div className="min-h-screen bg-white md:min-w-87.5 text-gray-900 relative " data-aos="fade-up" data-aos-duration="500">
 
                     {/* Top Navigation */}
-                    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
+                    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-5.25">
                         <div className="flex items-center gap-3">
                             <button onClick={() => { navigate('/settings', { replace: true }) }} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
                                 <ArrowLeft size={22} />
@@ -579,8 +579,8 @@ const Setting = () => {
 
             <div className='md:flex'>
 
-                <div className='flex flex-col md:min-w-87.5 h-dvh md:border-r border-chat-muted/15' data-aos="zoom-in" data-aos-duration="500">
-                    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-4">
+                <div className='flex flex-col md:min-w-90 h-dvh ' data-aos="fade-up" data-aos-duration="500">
+                    <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-5.25">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => { navigate('/', { replace: true }) }} // 👈 Added replace option here
@@ -614,7 +614,7 @@ const Setting = () => {
                         >
                             {userProfileImage ? (
                                 <img
-                                    src={u.profilePic || DEFAULT_AVATAR}
+                                    src={userProfileImage || DEFAULT_AVATAR}
                                     alt="Profile"
                                     className="w-12 h-12 rounded-full object-cover border border-chat-border"
                                     onError={(e) => {

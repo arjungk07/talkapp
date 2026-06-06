@@ -22,7 +22,6 @@ export function Profile() {
 
 
 
-
     return (
 
         <>
@@ -123,7 +122,7 @@ const WhatsAppHeader = ({ className }) => {
 
     const MobileHeader = () => {
         return (
-            <header className="w-full h-fit px-5 py-3 select-none">
+            <header className="w-full h-fit px-5 py-3 select-none ">
                 {/* Top Row: Wordmark and Action Icons */}
                 <div className="flex items-center justify-between">
                     <h1 className="text-black text-xl font-semibold tracking-wide">
@@ -166,7 +165,7 @@ const WhatsAppHeader = ({ className }) => {
 
             {/* LAPTOP/DESKTOP VIEW: Only shows on screens 'md' and larger */}
             <header
-                className=" hidden md:flex flex-col h-screen w-16 bg-chat-panel border-r border-chat-border py-4 items-center justify-between"
+                className=" hidden md:flex flex-col h-screen w-16 bg-chat-panel  border-r border-chat-border py-4 items-center justify-between"
             >
 
 
