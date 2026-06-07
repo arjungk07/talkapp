@@ -7,7 +7,7 @@ import { useAppContext } from "../context/AppContext";
 import EmojiPicker from "emoji-picker-react";
 import ReplyPreview from "./ReplyPreview";
 import { PlusIcon } from "lucide-react";
-import {useNavigate} from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 const REPLY_THRESHOLD = 72;
 const MAX_DRAG = 90;
@@ -223,6 +223,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
       });
     };
 
+    const IMAGE_NOT_FOUND =  "https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png"
+
     return (
       // The main container provides base styling for the bubble,
       // including background and alignment based on sender status.
@@ -239,9 +241,15 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
               {attachment.fileType === "image" && (
                 <>
                   <img
-                    src={attachment.localUrl || attachment.url || "https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png"}
+                    src={attachment.localUrl || attachment.url || IMAGE_NOT_FOUND}
                     alt={attachment.fileName || `Attachment ${index + 1}`}
                     className="w-full h-full object-cover select-none pointer-events-none"
+                    onError={(e) => {
+                      // 1. Prevent the error from trying to load again
+                      e.target.onerror = null;
+                      // 2. Point the source to the fallback image
+                      e.target.src = IMAGE_NOT-FOUND;
+                    }}
                   />
 
                   {/* Name who the image send */}

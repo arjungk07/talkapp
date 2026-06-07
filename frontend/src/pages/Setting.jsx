@@ -21,12 +21,9 @@ import { useLocation } from "react-router-dom";
 // the function for user profile picture 
 export function ProfilePic() {
     const { user } = useAuth();
-    const baseImage = user?.profilePic;
 
-    // Integrate timestamp only if baseImage exists to avoid generating a broken URL string
-    const userProfileImage = baseImage
-        ? `${baseImage}?t=${new Date().getTime()}`
-        : "";
+    const userProfileImage = user?.profilePic;
+
 
     const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
 
@@ -559,8 +556,8 @@ export function EditProfile() {
     // 1. Hook reference setup
     const dropdownRef = useRef(null);
 
-    const baseImage = user?.profilePic;
-    const userProfileImage = baseImage ? `${baseImage}?t=${new Date().getTime()}` : "";
+    const userProfileImage = user?.profilePic;
+
 
     const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
 

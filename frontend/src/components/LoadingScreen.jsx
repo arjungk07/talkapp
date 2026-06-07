@@ -68,7 +68,7 @@ export default function LoadingScreen({ initialLoading, usersCount }) {
                 <img src={logo} className='w-24 h-24' />
 
                 {/* The Progress Bar Component */}
-                <LoadingProgressBar duration={500} />
+                <LoadingProgressBar duration={6000} />
             </div>
 
             {/* Bottom Footer Text */}
