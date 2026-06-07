@@ -13,6 +13,8 @@ import VerifyOtp from "./pages/VerfiyOtp";
 import ResetPassword from "./pages/ResetPassword";
 import Setting from './pages/Setting'
 import { EditProfile } from "./pages/Setting";
+import { ImageFullPreview } from '../src/components/ReplyPreview';
+import { CropImage } from "./pages/Setting";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useEffect } from 'react';
@@ -54,6 +56,8 @@ const AppRoutes = () => {
       <Route path="/chat/:id" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Setting /></ProtectedRoute>} />
       <Route path="/EditProfile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+      <Route path="/image-preview" element={<ImageFullPreview />} />
+      <Route path="/crop-image" element={<CropImage/>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -9,17 +9,16 @@ import api from '../utils/api';
 import LogOut from '../components/LogOut';
 import { FiLogOut } from "react-icons/fi";
 import { useAppContext } from '../context/AppContext';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 
 
-export function Profile() {
+
+export function Profile({openSetting}) {
 
     const { user } = useAuth();
 
     const userProfileImage = user?.profilePic;
-
-
 
 
     return (
@@ -27,7 +26,7 @@ export function Profile() {
         <>
 
 
-            <Link to={'/settings'} className="p-2">
+            <div onClick={openSetting} className="p-2">
 
                 <div
                     className="
@@ -93,7 +92,7 @@ export function Profile() {
 
                 </div>
 
-            </Link>
+            </div>
 
         </>
     );
@@ -117,7 +116,11 @@ const WhatsAppHeader = ({ className }) => {
     ];
 
 
+    const navigate = useNavigate();
 
+    const openSetting = () => {
+        navigate('/settings');
+    }
 
 
     const MobileHeader = () => {
@@ -133,17 +136,17 @@ const WhatsAppHeader = ({ className }) => {
 
 
 
-                        <Profile />
+                        <Profile openSetting={openSetting}/>
 
                         <button className="p-1 rounded-full cursor-pointer ">
                             <Camera size={22} />
                         </button>
 
 
-                        <Link to={"/settings"}
+                        <div onClick={openSetting}
                             className="p-1 rounded-full cursor-pointer">
                             <MoreVertical size={22} />
-                        </Link>
+                        </div>
 
 
 
@@ -197,7 +200,7 @@ const WhatsAppHeader = ({ className }) => {
                         <GrGallery size={22} />
                     </button>
 
-                    <Profile />
+                    <Profile openSetting={openSetting}/>
 
 
 

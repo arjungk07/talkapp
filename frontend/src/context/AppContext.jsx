@@ -33,6 +33,7 @@ export const AppContextProvider = ({ children }) => {
             const { data } = await api.get('/api/users');
             console.log("Data received from backend:", data);
             setUsers(data); // 👈 Directly populating the main state
+            setAppLoading(false);
         } catch (err) {
             // 1. Check for offline status first
             if (!navigator.onLine) {

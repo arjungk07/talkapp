@@ -2,14 +2,105 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ImageIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { ArrowLeft } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import {TransformWrapper, TransformComponent} from "react-zoom-pan-pinch";
+import { ProfilePic } from "../pages/Setting";
 
-/**
- * ReplyPreview
- * ─────────────
- * Props:
- *   replyingTo  {object|null}  — the message being replied to (null = hidden)
- *   onCancel    {function}     — called when the X button is clicked
- */
+
+
+// ImageFull Preview component. user click the image on chat window execute the component 
+export const ImageFullPreview = () => {
+  const navigate = useNavigate();
+  const { state } = useLocation();
+
+  if (!state?.imageUrl) {
+    navigate(-1);
+    return null;
+  }
+
+  const {
+    imageUrl,
+    senderName,
+    createdAt,
+    profileUrl,
+  } = state;
+
+  return (
+    <div className="fixed inset-0 z-9999 bg-white flex flex-col">
+
+      {/* Header */}
+      <header className="h-20 shrink-0 px-4  flex items-center  gap-3 bg-white border-b border-chat-panel">
+
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-full hover:bg-gray-100 transition"
+        >
+          <ArrowLeft size={22} />
+        </button>
+
+         {/* profile pic */}
+        <ProfilePic />
+
+        {/* User Details */}
+        <div className="flex flex-col">
+          <h3 className="font-semibold text-gray-900">
+            {senderName}
+          </h3>
+
+          <p className="text-xs text-gray-500">
+            {createdAt
+              ? format(
+                  new Date(createdAt),
+                  "dd MMM yyyy • hh:mm a"
+                )
+              : ""}
+          </p>
+        </div>
+      </header>
+
+      {/* Image Viewer */}
+      <main className="flex-1 overflow-hidden">
+
+        <TransformWrapper
+          initialScale={1}
+          minScale={1}
+          maxScale={5}
+          centerOnInit
+          wheel={{
+            smoothStep: 0.15,
+          }}
+          doubleClick={{
+            mode: "zoomIn",
+          }}
+        >
+          <TransformComponent
+            wrapperClass="!w-full !h-full"
+            contentClass="!w-full !h-full flex items-center justify-center"
+          >
+            <img
+              src={imageUrl}
+              alt="Preview"
+              draggable={false}
+              className="
+                max-w-full
+                max-h-full
+                object-contain
+                select-none
+                pointer-events-none
+              "
+            />
+          </TransformComponent>
+        </TransformWrapper>
+
+      </main>
+    </div>
+  );
+};
+
+
+
 const ReplyPreview = ({ replyingTo, replyingTobubble, onReplyCancel, imageTo, onImgCancel }) => {
 
 
@@ -30,6 +121,7 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onReplyCancel, imageTo, on
   return (
     <AnimatePresence>
 
+      {/*  replyingTo for normal text */}
       {replyingTo && !replyingTo?.attachments?.[0] && (
         <motion.div
           key="reply-preview"
@@ -88,6 +180,7 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onReplyCancel, imageTo, on
         </motion.div>
       )}
 
+       {/* replyingTo for imagepreview on input field */}
       {replyingTo?.attachments?.[0] && (
         <motion.div
           key="reply-preview"
@@ -141,6 +234,7 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onReplyCancel, imageTo, on
         </motion.div>
       )}
 
+       {/* reply Bubble ui with text and image */}
       {replyingTobubble && (
         <motion.div
           initial={{ opacity: 0, y: 5 }}
@@ -191,7 +285,7 @@ const ReplyPreview = ({ replyingTo, replyingTobubble, onReplyCancel, imageTo, on
         </motion.div>
       )}
 
-
+       {/* replyingTo for imagePreview without attachments image */}
       {imageTo && (
         <motion.div
           key="reply-preview"

@@ -47,6 +47,7 @@ function LoadingProgressBar({ duration }) {
                     Loading your chats
                 </span>
             </div>
+            
         </div>
     );
 }
@@ -67,7 +68,7 @@ export default function LoadingScreen({ initialLoading, usersCount }) {
                 <img src={logo} className='w-24 h-24' />
 
                 {/* The Progress Bar Component */}
-                <LoadingProgressBar duration={3000} />
+                <LoadingProgressBar duration={500} />
             </div>
 
             {/* Bottom Footer Text */}

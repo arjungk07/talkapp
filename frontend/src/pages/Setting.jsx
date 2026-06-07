@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { FiLogOut } from 'react-icons/fi';
@@ -12,9 +12,50 @@ import TakePhoto from '../components/TakePhoto';
 import ChatWindow from '../components/ChatWindow';
 import { useNavigate } from 'react-router-dom';
 import LogOut from '../components/LogOut';
-import { Link } from 'react-router-dom';
+//crop image import section
+import Cropper from "react-easy-crop";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { useLocation } from "react-router-dom";
 
-// 1. Edit New name.
+
+// the function for user profile picture 
+export function ProfilePic() {
+    const { user } = useAuth();
+    const baseImage = user?.profilePic;
+
+    // Integrate timestamp only if baseImage exists to avoid generating a broken URL string
+    const userProfileImage = baseImage
+        ? `${baseImage}?t=${new Date().getTime()}`
+        : "";
+
+    const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
+
+    return (
+        <>
+            {userProfileImage ? (
+                <img
+                    src={userProfileImage || DEFAULT_AVATAR}
+                    alt="Profile"
+                    className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                    onError={(e) => {
+                        // 1. Prevent the error from trying to load again
+                        e.target.onerror = null;
+                        // 2. Point the source to the fallback image
+                        e.target.src = DEFAULT_AVATAR;
+                    }}
+                />
+            ) : (
+                <div className='flex items-center justify-center'>
+                    <CgProfile className='w-12 h-12 text-zinc-400 object-cover' />
+                </div>
+            )}
+        </>
+    )
+
+
+}
+
+//  Edit New name.
 export function EditNameCard({ user, onUpdateName }) {
     const [isEditingName, setIsEditingName] = useState(false);
     const [nameInput, setNameInput] = useState(user?.name || "");
@@ -135,7 +176,7 @@ export function EditNameCard({ user, onUpdateName }) {
     );
 }
 
-
+// view Photo 
 export function ProfilePreview({ closeProfilePreview, userProfileImage }) {
 
     const { user } = useAuth();
@@ -200,16 +241,22 @@ export function ProfilePreview({ closeProfilePreview, userProfileImage }) {
     );
 }
 
-// 2. MEDIA DROPDOWN COMPONENT
-export function MediaDropdown({ onFileSelect, onFileRemove, openProfilePreview, openTakePhoto }) {
-    { }
+//  MEDIA DROPDOWN COMPONENT
+export function MediaDropdown({ onFileRemove, openProfilePreview, openTakePhoto }) {
+
     const fileInputRef = useRef();
+    const navigate = useNavigate();
 
     const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            onFileSelect(file);
-        }
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        navigate("/crop-image", {
+            state: {
+                selectedFile: file,
+            },
+        });
     };
 
     return (
@@ -268,7 +315,237 @@ export function MediaDropdown({ onFileSelect, onFileRemove, openProfilePreview, 
     );
 }
 
-// 3. EDIT PROFILE COMPONENT
+
+export function CropImage() {
+    const navigate = useNavigate();
+    const { state } = useLocation();
+
+    const file = state?.selectedFile;
+
+    const [imageUrl, setImageUrl] = useState("");
+
+    const [crop, setCrop] = useState({
+        x: 0,
+        y: 0,
+    });
+
+    const [zoom, setZoom] = useState(1);
+
+    const [croppedAreaPixels, setCroppedAreaPixels] =
+        useState(null);
+
+    useEffect(() => {
+
+        if (!file) {
+            navigate(-1);
+            return;
+        }
+
+        const url = URL.createObjectURL(file);
+
+        setImageUrl(url);
+
+        return () => URL.revokeObjectURL(url);
+
+    }, [file, navigate]);
+
+    const onCropComplete = useCallback(
+        (_, croppedPixels) => {
+            setCroppedAreaPixels(croppedPixels);
+        },
+        []
+    );
+
+    const createImage = (url) =>
+        new Promise((resolve, reject) => {
+
+            const image = new Image();
+
+            image.addEventListener("load", () =>
+                resolve(image)
+            );
+
+            image.addEventListener("error", reject);
+
+            image.src = url;
+        });
+
+    const getCroppedFile = async () => {
+
+        const image =
+            await createImage(imageUrl);
+
+        const canvas =
+            document.createElement("canvas");
+
+        const ctx =
+            canvas.getContext("2d");
+
+        canvas.width =
+            croppedAreaPixels.width;
+
+        canvas.height =
+            croppedAreaPixels.height;
+
+        ctx.drawImage(
+            image,
+            croppedAreaPixels.x,
+            croppedAreaPixels.y,
+            croppedAreaPixels.width,
+            croppedAreaPixels.height,
+            0,
+            0,
+            croppedAreaPixels.width,
+            croppedAreaPixels.height
+        );
+
+        return new Promise((resolve) => {
+
+            canvas.toBlob((blob) => {
+
+                const croppedFile =
+                    new File(
+                        [blob],
+                        file.name,
+                        {
+                            type: file.type,
+                        }
+                    );
+
+                resolve(croppedFile);
+
+            }, file.type);
+
+        });
+
+    };
+
+    const handleDone = async () => {
+
+        const croppedFile =
+            await getCroppedFile();
+
+        navigate("/EditProfile", {
+            replace: true,
+            state: {
+                croppedFile,
+            },
+        });
+
+    };
+
+    if (!file) return null;
+
+    return (
+        <div className="fixed inset-0 z-9999 bg-white flex flex-col">
+
+            {/* Header */}
+
+            <header
+                className="
+                    h-16
+                    border-b
+                    border-zinc-200
+                    flex
+                    items-center
+                    px-4
+                    bg-white
+                "
+            >
+                <button
+                    onClick={() => navigate(-1)}
+                >
+                    <ArrowLeft />
+                </button>
+
+                <h2
+                    className="
+                        ml-4
+                        text-lg
+                        font-semibold
+                    "
+                >
+                    Crop Photo
+                </h2>
+            </header>
+
+            {/* Crop Area */}
+
+            <div
+                className="
+                    relative
+                    flex-1
+                    bg-black
+                "
+            >
+                <Cropper
+                    image={imageUrl}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    cropShape="round"
+                    showGrid={false}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={
+                        onCropComplete
+                    }
+                />
+            </div>
+
+            {/* Zoom Slider */}
+
+            <div
+                className="
+                    bg-white
+                    px-5
+                    py-4
+                "
+            >
+                <input
+                    type="range"
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    value={zoom}
+                    onChange={(e) =>
+                        setZoom(
+                            Number(
+                                e.target.value
+                            )
+                        )
+                    }
+                    className="w-full"
+                />
+            </div>
+
+            {/* Done */}
+
+            <button
+                onClick={handleDone}
+                className="
+                    fixed
+                    bottom-8
+                    right-8
+                    w-16
+                    h-16
+                    rounded-full
+                    bg-green-500
+                    text-white
+                    flex
+                    items-center
+                    justify-center
+                    shadow-xl
+                "
+            >
+                <Check size={28} />
+            </button>
+
+        </div>
+    );
+}
+
+//  EDIT PROFILE COMPONENT
 export function EditProfile() {
     const { user, socket, setUser } = useAuth();
     const [loading, setLoading] = useState(false);
@@ -302,6 +579,16 @@ export function EditProfile() {
             document.removeEventListener("mousedown", handleOutsideClick);
         };
     }, [mediaDropdown]);
+
+    // upload profile image after crop 
+    const location = useLocation();
+
+    useEffect(() => {
+        if (!location.state?.croppedFile) return;
+
+        handleUploadImage(location.state.croppedFile);
+
+    }, [location.key]);
 
     const handleUploadImage = async (file) => {
         console.log(file)
@@ -434,7 +721,7 @@ export function EditProfile() {
                     {/* Top Navigation */}
                     <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-5.25">
                         <div className="flex items-center gap-3">
-                            <button onClick={() => { navigate('/settings', { replace: true }) }} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
+                            <button onClick={() => navigate(-1)} className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition">
                                 <ArrowLeft size={22} />
                             </button>
                             <h1 className="text-lg font-semibold text-gray-900">Edit Profile</h1>
@@ -455,7 +742,7 @@ export function EditProfile() {
                                         <img
                                             src={userProfileImage || DEFAULT_AVATAR}
                                             alt="Profile"
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                            className="w-full h-full rounded-full object-cover group-hover:scale-110 transition-transform duration-300"
                                             onError={(e) => {
                                                 // 1. Prevent the error from trying to load again
                                                 e.target.onerror = null;
@@ -496,7 +783,6 @@ export function EditProfile() {
                                 {mediaDropdown && (
                                     <div ref={dropdownRef}>
                                         <MediaDropdown
-                                            onFileSelect={handleUploadImage}
                                             onFileRemove={onFileRemove}
                                             openProfilePreview={handleprofilePreview}
                                             openTakePhoto={() => setIsTakePhoto(true)}
@@ -555,7 +841,7 @@ export function EditProfile() {
 }
 
 
-// 4. MAIN SETTINGS VIEW CONTAINER
+//  MAIN SETTINGS VIEW CONTAINER
 const Setting = () => {
     const { user } = useAuth();
     const { isLogoutModalOpen, setIsLogoutModalOpen } = useAppContext();
@@ -563,15 +849,9 @@ const Setting = () => {
 
     const navigate = useNavigate();
 
-    // Base image URL fallback logic
-    const baseImage = user?.profilePic;
-
-    // Integrate timestamp only if baseImage exists to avoid generating a broken URL string
-    const userProfileImage = baseImage
-        ? `${baseImage}?t=${new Date().getTime()}`
-        : "";
-
-    const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
+    const openEditProfile = () => {
+        navigate("/EditProfile")
+    }
 
     return (
         <>
@@ -583,7 +863,7 @@ const Setting = () => {
                     <div className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-5.25">
                         <div className="flex items-center gap-3">
                             <button
-                                onClick={() => { navigate('/', { replace: true }) }} // 👈 Added replace option here
+                                onClick={() => navigate(-1)}
                                 className="rounded-full cursor-pointer p-2 text-gray-600 hover:bg-gray-100 transition"
                             >
                                 <ArrowLeft size={22} />
@@ -609,35 +889,19 @@ const Setting = () => {
                         </div>
 
                         {/* Interactive Profile Row Entry */}
-                        <Link to={'/EditProfile'}
+                        <div onClick={openEditProfile}
                             className="cursor-pointer px-4 py-4 flex items-center justify-center gap-3 rounded-2xl hover:bg-gray-50 transition"
                         >
-                            {userProfileImage ? (
-                                <img
-                                    src={userProfileImage || DEFAULT_AVATAR}
-                                    alt="Profile"
-                                    className="w-12 h-12 rounded-full object-cover border border-chat-border"
-                                    onError={(e) => {
-                                        // 1. Prevent the error from trying to load again
-                                        e.target.onerror = null;
-                                        // 2. Point the source to the fallback image
-                                        e.target.src = DEFAULT_AVATAR;
-                                    }}
-                                />
-                            ) : (
-                                <div className='flex items-center justify-center'>
-                                    <CgProfile className='w-12 h-12 text-zinc-400 object-cover' />
-                                </div>
-                            )}
+                            <ProfilePic />
                             <div className="flex-1">
                                 <h3 className="font-semibold text-gray-800">{user?.username || user?.name}</h3>
                                 <p className="text-xs text-gray-500 mt-0.5">Tap to change profile info</p>
                             </div>
-                        </Link>
+                        </div>
 
                         {/* Menu Options */}
                         <div className="py-2">
-                            <Link to={'/EditProfile'}
+                            <div onClick={openEditProfile}
                                 className="w-full cursor-pointer px-6 py-4 flex items-center justify-start gap-3 rounded-2xl hover:bg-gray-50 transition"
                             >
                                 <div className='flex items-center justify-center'>
@@ -647,7 +911,7 @@ const Setting = () => {
                                     <h4 className="text-sm font-medium text-gray-800">Profile</h4>
                                     <p className="text-xs text-gray-500 mt-0.5">Name, Username, profile photo</p>
                                 </div>
-                            </Link>
+                            </div>
                         </div>
 
                         {/* Logout Option */}

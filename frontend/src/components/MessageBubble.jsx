@@ -7,6 +7,7 @@ import { useAppContext } from "../context/AppContext";
 import EmojiPicker from "emoji-picker-react";
 import ReplyPreview from "./ReplyPreview";
 import { PlusIcon } from "lucide-react";
+import {useNavigate} from 'react-router-dom'
 
 const REPLY_THRESHOLD = 72;
 const MAX_DRAG = 90;
@@ -209,6 +210,19 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
     // This component is only called if msg.attachments exists and is not empty.
     const attachments = Array.isArray(message.attachments) ? message.attachments : [];
 
+    const navigate = useNavigate();
+
+    const openPreview = (attachment) => {
+      navigate("/image-preview", {
+        state: {
+          imageUrl: attachment.localUrl || attachment.url,
+          senderName: selectedUser?.name,
+          createdAt: message.createdAt,
+          isSent,
+        },
+      });
+    };
+
     return (
       // The main container provides base styling for the bubble,
       // including background and alignment based on sender status.
@@ -218,15 +232,16 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           {attachments.map((attachment, index) => (
             <div
               key={index}
-              className={`relative overflow-hidden rounded-lg ${attachments.length > 1 ? "w-[calc(50%-4px)]" : "w-full"
+              onClick={() => openPreview(attachment)}
+              className={`relative aspect-square overflow-hidden select-none rounded-lg ${attachments.length > 1 ? "w-[calc(50%-4px)]" : "w-full"
                 }`}
             >
               {attachment.fileType === "image" && (
                 <>
                   <img
-                    src={attachment.localUrl || attachment.url}
+                    src={attachment.localUrl || attachment.url || "https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png"}
                     alt={attachment.fileName || `Attachment ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover select-none pointer-events-none"
                   />
 
                   {/* Name who the image send */}
