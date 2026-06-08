@@ -6,6 +6,7 @@ import api from "../utils/api";
 export const useMessages = (selectedUser) => {
   const { socket, user } = useAuth();
   const [messages, setMessages] = useState([]);
+  console.log(messages)
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -393,6 +394,8 @@ export const useMessages = (selectedUser) => {
       // 1. Post to HTTP backend to persist reaction in MongoDB
       const { data } = await api.post(`/api/messages/${messageId}/react`, { emoji });
 
+      console.log(data)
+
       // Expected backend response syntax: { messageId, reactions: [...] }
       // 2. Emit via socket to notify the other user instantly
       socket.emit("sendReaction", {
@@ -405,7 +408,6 @@ export const useMessages = (selectedUser) => {
       setMessages((prev) =>
         prev.map((msg) => (msg._id === messageId ? { ...msg, reactions: data.reactions } : msg))
       );
-      console.log(messages);
     } catch (err) {
       console.error("Failed to add reaction:", err.message);
     }

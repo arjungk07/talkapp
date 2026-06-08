@@ -19,8 +19,6 @@ export function Profile({openSetting}) {
     const { user } = useAuth();
 
     const userProfileImage = user?.profilePic;
-    console.log(userProfileImage);
-
 
     return (
 

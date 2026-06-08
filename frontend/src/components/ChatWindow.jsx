@@ -13,7 +13,7 @@ import { format, set } from "date-fns";
 import { UploadBar, DeleteMessagePopup, DeleteAction } from "./ActionBars";
 import api from "../utils/api";
 import toast from "react-hot-toast";
-
+import Loading_animation from '../assets/image/loading_animation.mp4'
 
 
 
@@ -125,12 +125,10 @@ const ChatWindow = () => {
 
       // 3. Only scroll down if it's NOT already visible on screen
       if (!isAtBottom) {
-        bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        bottomRef.current.scrollIntoView({ behavior: "auto" });
       }
     }
   }, [messages, isTyping, text]);
-
-
 
 
   const scrollToBottom = () => {
@@ -139,7 +137,6 @@ const ChatWindow = () => {
       behavior: "smooth",
     });
   };
-
 
 
 
@@ -287,7 +284,7 @@ const ChatWindow = () => {
 
 
   // No user selected — only visible on desktop (parent hides this on mobile)
-  if (!selectedUser ) {
+  if (!selectedUser) {
     return (
       <div className="flex-1 flex items-center h-screen justify-center bg-chat-panel" >
         <div className="text-center">
@@ -331,10 +328,23 @@ const ChatWindow = () => {
 
 
         {loading ? (
+
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full w-10 h-10 border-t-4 border-b-4 border-black" />
-              <p className="mt-4 font-medium text-black">Loading Messages...</p>
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-32 h-32 object-contain"
+              >
+                <source src={Loading_animation} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+
+              <p className="font-medium text-black">
+                Loading Messages...
+              </p>
             </div>
           </div>
         ) : messages.length === 0 ? (
@@ -421,7 +431,7 @@ const ChatWindow = () => {
 
       {/* ── FOOTER — sticky at visual bottom, never moves ── */}
       <footer
-        className={`sticky right-0 bottom-0 ${DeleteModel ? "z-0" : "z-99"} bg-white px-4 py-2`}
+        className={`sticky right-0 bottom-0 ${DeleteModel ? "z-0" : ""} bg-white px-4 py-2`}
         style={{
           bottom: `${keyboardHeight}px`,
           transition: "bottom 0.2 ease"
