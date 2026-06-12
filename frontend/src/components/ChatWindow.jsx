@@ -18,6 +18,83 @@ import Loading_animation from '../assets/image/loading_animation.mp4'
 
 
 
+// Frequently used messages
+
+export const RecentMsg = ({ handleSend }) => {
+  const { selectedUser } = useAuth();
+  const { messages } = useMessages(selectedUser);
+
+  const frequencyMap = {};
+
+  messages.forEach((msg) => {
+    const text = msg?.text?.trim();
+
+    if (!text) return;
+
+    frequencyMap[text] = (frequencyMap[text] || 0) + 1;
+  });
+
+  const frequentMessages = Object.entries(frequencyMap)
+    .filter(([text, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([text, count]) => ({
+      text,
+      count,
+    }));
+
+
+  const defaultMessages = [
+    { text: "👍" },
+    { text: "Hello" },
+    { text: "How are you?" },
+    { text: "Thank you" },
+    { text: "Okay" },
+  ];
+
+  const displayMessages =
+    frequentMessages.length > 0
+      ? frequentMessages
+      : defaultMessages;
+
+
+
+
+  return (
+    <div className="flex gap-3 overflow-x-auto px-4 py-2 scrollbar-hide">
+      {displayMessages.map((msg, index) => (
+        <button
+          key={msg.text}
+          onClick={() => handleSend(msg.text)}
+          title={msg.text}
+          className={`
+            cursor-pointer
+            shrink-0
+            max-w-35
+            md:max-w-55
+            truncate
+            rounded-full
+            border border-gray-200
+            bg-white
+            px-4 py-2
+            text-sm font-medium text-gray-700
+            shadow-sm
+            transition-all duration-200
+            hover:bg-green-50
+            hover:border-green-300
+            hover:text-green-600
+            hover:shadow-md
+            active:scale-95
+            ${index >= 5 ? "hidden md:block" : ""}
+          `}
+        >
+          {msg.text}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const ChatWindow = () => {
   const { user, selectedUser } = useAuth();
   const {
@@ -140,11 +217,13 @@ const ChatWindow = () => {
 
 
 
-  const handleSend = async (e) => {
+  const handleSend = async (recentTxt = null, e) => {
     if (e && e.preventDefault) e.preventDefault();
 
+    const Msgtext = recentTxt ?? text;
+
     // FIX: Return early if there is no content OR if we are ALREADY sending
-    if ((!text.trim() && !imageTo) || sending) return;
+    if ((!Msgtext.trim() && !imageTo) || sending) return;
 
     try {
       setSending(true);
@@ -157,7 +236,7 @@ const ChatWindow = () => {
       emitStopTyping();
 
       await sendMessage(
-        text,
+        Msgtext,
         isActive,
         replyingTo ? { _id: replyingTo._id, text: replyingTo.text, image: replyingTo?.attachments?.[0]?.url } : null
       );
@@ -429,9 +508,11 @@ const ChatWindow = () => {
         }}
       />
 
+      <RecentMsg handleSend={handleSend} />
+
       {/* ── FOOTER — sticky at visual bottom, never moves ── */}
       <footer
-        className={`sticky right-0 bottom-0 ${DeleteModel ? "z-0" : ""} bg-white px-4 py-2`}
+        className={`sticky right-0 bottom-0 ${DeleteModel ? "z-0" : "z-50 md:z-0"} bg-white px-4 py-2`}
         style={{
           bottom: `${keyboardHeight}px`,
           transition: "bottom 0.2 ease"

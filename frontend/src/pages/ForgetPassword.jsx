@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-hot-toast';
+import api from "../utils/api";
+
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
+ 
+ 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -15,33 +18,24 @@ const ForgotPassword = () => {
       return;
     }
 
-    // 1. Start loading immediately
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/send-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
+      const { data } = await api.post("api/auth/send-otp", {
+        email,
       });
 
-      const data = await res.json();
-
-      if (res.ok) {
-        // Store email so VerifyOTP page knows who to verify
-        localStorage.setItem("email", email);
-        toast.success("OTP sent successfully");
-        navigate("/verify-otp");
-      } else {
-        toast.error(data.message || "Something went wrong");
-        // Only stop loading if we AREN'T navigating away
-        setLoading(false);
-      }
+      localStorage.setItem("email", email);
+      toast.success(data.message || "OTP sent successfully");
+      navigate("/verify-otp");
     } catch (error) {
-      console.error("Fetch Error:", error);
-      toast.error("Network error. Please try again.");
+      console.error("API Error:", error);
+
+      toast.error(
+        error.response?.data?.message ||
+        "Network error. Please try again."
+      );
+
       setLoading(false);
     }
   };
@@ -83,7 +77,7 @@ const ForgotPassword = () => {
         </p>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+        <form onSubmit={handleSubmit} className="space-y-4" >
           <div>
             <label className="block text-sm font-medium mb-1">
               Email Address
@@ -91,7 +85,6 @@ const ForgotPassword = () => {
             <input
               type="email"
               placeholder="name@example.com"
-              autoComplete="off"
               className="w-full px-3 py-2 border rounded-lg focus-visible:ring-2 focus-visible:ring-black outline-none transition-all"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

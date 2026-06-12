@@ -13,13 +13,13 @@ import { createPortal } from "react-dom";
 const REPLY_THRESHOLD = 72;
 const MAX_DRAG = 90;
 
-// ── ImageBubble extracted OUTSIDE MessageBubble to avoid hook-order issues ──
+// ── ImageBubble 
 const IMAGE_NOT_FOUND =
   "https://upload.wikimedia.org/wikipedia/commons/a/a3/Image-not-found.png";
 
 const ImageBubble = ({ message, isSent, selectedUser, longPressTriggered }) => {
 
-  const {isSelectMode} = useAppContext();
+  const { isSelectMode } = useAppContext();
 
   const navigate = useNavigate();
   const attachments = Array.isArray(message.attachments)
@@ -29,9 +29,9 @@ const ImageBubble = ({ message, isSent, selectedUser, longPressTriggered }) => {
   const openPreview = (attachment) => {
 
     // this prevent user press long for selection not open
-    if(longPressTriggered.current) {return};
+    if (longPressTriggered.current) { return };
 
-    if(isSelectMode) return;
+    if (isSelectMode) return;
 
     navigate("/image-preview", {
       state: {
@@ -50,9 +50,8 @@ const ImageBubble = ({ message, isSent, selectedUser, longPressTriggered }) => {
           <div
             key={index}
             onClick={() => openPreview(attachment)}
-            className={`relative aspect-square overflow-hidden select-none rounded-lg ${
-              attachments.length > 1 ? "w-[calc(50%-4px)]" : "w-full"
-            }`}
+            className={`relative aspect-square overflow-hidden select-none rounded-lg ${attachments.length > 1 ? "w-[calc(50%-4px)]" : "w-full"
+              }`}
           >
             {attachment.fileType === "image" && (
               <>
@@ -131,6 +130,10 @@ const ImageBubble = ({ message, isSent, selectedUser, longPressTriggered }) => {
     </div>
   );
 };
+
+
+
+
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const MessageBubble = ({ message, onEmojiClick, onReply }) => {
@@ -296,9 +299,12 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
   // ── Long-press (mobile select) ─────────────────────────────────────────────
   const handlePressStart = () => {
-      longPressTriggered.current = false;
+    longPressTriggered.current = false;
+
+    if (fullView) return;
+
     pressTimer.current = setTimeout(() => {
-        longPressTriggered.current = true;
+      longPressTriggered.current = true;
       setIsShowMode(false);
       setIsSelectMode(true);
       // Update bubble rect before opening picker
@@ -344,8 +350,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
   // ── Emoji click handler ────────────────────────────────────────────────────
   // FIX: compact picker passes { emoji } correctly; full picker uses emojiData.emoji
-  
-  
+
+
   const handleCompactEmojiClick = (emoji) => {
     onEmojiClick?.(message._id, { emoji });
     resetEmojiView();
@@ -361,16 +367,16 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
   // ── Compact picker position: above the bubble ──────────────────────────────
   const compactPickerStyle = bubbleRect
     ? {
-        position: "fixed",
-        // Place above the bubble with a small gap
-        top: bubbleRect.top +10,
-        // Align to bubble's left edge but keep it on screen
-        left: Math.min(
-          Math.max(bubbleRect.left, 8),
-          window.innerWidth - 320
-        ),
-        zIndex: 9999,
-      }
+      position: "fixed",
+      // Place above the bubble with a small gap
+      top: bubbleRect.top + 10,
+      // Align to bubble's left edge but keep it on screen
+      left: Math.min(
+        Math.max(bubbleRect.left, 8),
+        window.innerWidth - 320
+      ),
+      zIndex: 9999,
+    }
     : { display: "none" };
 
 
@@ -514,11 +520,9 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
             />
           ) : (
             <p
-              className={`text-sm ${
-                message.replyingTo ? "ps-3 pe-3" : ""
-              } leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${
-                isSent ? "text-white" : "text-chat-text"
-              }`}
+              className={`text-sm ${message.replyingTo ? "ps-3 pe-3" : ""
+                } leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-white" : "text-chat-text"
+                }`}
             >
               {message.text}
             </p>
@@ -527,9 +531,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
           {/* Timestamp + Read receipt */}
           {!hasAttachments && (
             <div
-              className={`flex items-center gap-1 mb-2 justify-end ${
-                message.replyingTo ? "px-2 pb-1" : ""
-              }`}
+              className={`flex items-center gap-1 mb-2 justify-end ${message.replyingTo ? "px-2 pb-1" : ""
+                }`}
             >
               <span
                 className={`text-[10px] ${isSent ? "text-white/90" : "text-black"}`}
@@ -578,9 +581,8 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
         {/* Emoji reactions display */}
         {message.reactions?.length > 0 && (
           <div
-            className={`flex gap-1 z-10 ${
-              isSent ? "-mt-2" : "-mt-3"
-            } px-2`}
+            className={`flex gap-1 z-10 ${isSent ? "-mt-2" : "-mt-3"
+              } px-2`}
             data-aos="zoom-in"
             data-aos-duration="300"
           >
@@ -655,7 +657,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
                 <div className="relative w-87.5 md:w-125 z-10 bg-white rounded-t-2xl shadow-2xl pb-safe">
                   <EmojiPicker
-                    onEmojiClick={(emojiData,e) => {
+                    onEmojiClick={(emojiData, e) => {
                       e.stopPropagation?.();
                       handleFullEmojiClick(emojiData);
                     }}

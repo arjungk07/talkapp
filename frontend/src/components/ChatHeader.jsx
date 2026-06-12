@@ -108,7 +108,7 @@ const ChatHeader = () => {
     return (
         <div>
             {/* CHAT HEADER */}
-            <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center  gap-3 shrink-0 z-10">
+            <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center  gap-3 shrink-0 z-50 md:z-0">
 
                 {/* user profile  */}
                 <div className="relative">

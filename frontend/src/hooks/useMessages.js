@@ -6,7 +6,6 @@ import api from "../utils/api";
 export const useMessages = (selectedUser) => {
   const { socket, user } = useAuth();
   const [messages, setMessages] = useState([]);
-  console.log(messages)
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -37,39 +36,74 @@ export const useMessages = (selectedUser) => {
   // -----------------------------------------------------------------
   // 1. WATCH REAL-TIME LISTENER FOR NEW INCOMING MESSAGES (Your modified block)
   // -----------------------------------------------------------------
+
+
+
   useEffect(() => {
-    if (!socket || !selectedUser || !user) return;
+    if (!socket || !user) return;
 
     const handleNewMessage = (message) => {
+      console.log("New Message Received:", message);
+
+      // Check if current open chat matches this message
       const isRelevant =
-        (message.senderId === selectedUser._id && message.receiverId === user._id) ||
-        (message.senderId === user._id && message.receiverId === selectedUser._id);
+        selectedUser &&
+        (
+          (message.senderId === selectedUser._id &&
+            message.receiverId === user._id) ||
+          (message.senderId === user._id &&
+            message.receiverId === selectedUser._id)
+        );
 
+      // Chat window update
       if (isRelevant) {
-        const isIncoming = message.senderId === selectedUser._id; // arjun send msg to ganesh.ganesh phone message.senderId(arjun) === selectedUser._id(arjun)     
-        console.log(isIncoming)
+        const isIncoming =
+          message.senderId === selectedUser._id;
 
-        // If Ganesh has the chat window open and Arjun sends a message live
         if (isIncoming) {
-          // 👉 EMIT HERE: Tell backend to update DB instantly
           socket.emit("markMessagesAsRead", {
-            chatUserId: selectedUser._id, // Arjun's ID
-            currentUserId: user._id,      // Ganesh's ID
+            chatUserId: selectedUser._id,
+            currentUserId: user._id,
           });
 
-          // Mark it read locally so Ganesh's UI shows it as read immediately
-          message.read = true; // this message.read = true change ui for sender only user and receiver active in chatwindow using isIncomming
+          message.read = true;
         }
 
         setMessages((prev) => [...prev, message]);
-        console.log("newmessage from usemessages", message);
+      }
+
+      // Browser Notification
+      const isIncomingForCurrentUser =
+        message.receiverId === user._id;
+
+      const chatIsOpen =
+        selectedUser?._id === message.senderId;
+
+      if (
+        Notification.permission === "granted" &&
+        isIncomingForCurrentUser &&
+        !chatIsOpen
+      ) {
+        new Notification(
+          message.senderName || "New Message",
+          {
+            body:
+              message.text ||
+              message.message ||
+              "You received a new message",
+
+            icon: "/logo1.png", // optional
+          }
+        );
       }
     };
 
     socket.on("newMessage", handleNewMessage);
-    return () => socket.off("newMessage", handleNewMessage);
-  }, [socket, selectedUser, user, setMessages]);
 
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, user, selectedUser, setMessages]);
 
   // -----------------------------------------------------------------
   // 2. TRIGGER: When Ganesh opens the chat window LATER (or switches to it)

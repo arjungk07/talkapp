@@ -57,7 +57,7 @@ const AppRoutes = () => {
       <Route path="/settings" element={<ProtectedRoute><Setting /></ProtectedRoute>} />
       <Route path="/EditProfile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
       <Route path="/image-preview" element={<ImageFullPreview />} />
-      <Route path="/crop-image" element={<CropImage/>} />
+      <Route path="/crop-image" element={<CropImage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -65,7 +65,17 @@ const AppRoutes = () => {
 
 function App() {
 
-
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission()
+        .then((permission) => {
+          console.log("Notification permission:", permission);
+        })
+        .catch((err) => {
+          console.error("Notification permission error:", err);
+        });
+    }
+  }, []);
 
   useEffect(() => {
     AOS.init({ duration: 1000 });
