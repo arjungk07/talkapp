@@ -14,11 +14,14 @@ import { useNavigate } from 'react-router-dom';
 
 
 
-export function Profile({openSetting}) {
+export function Profile({ openSetting }) {
 
     const { user } = useAuth();
 
     const userProfileImage = user?.profilePic;
+
+    const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
+
 
     return (
 
@@ -135,7 +138,7 @@ const WhatsAppHeader = ({ className }) => {
 
 
 
-                        <Profile openSetting={openSetting}/>
+                        <Profile openSetting={openSetting} />
 
                         <button className="p-1 rounded-full cursor-pointer ">
                             <Camera size={22} />
@@ -199,7 +202,7 @@ const WhatsAppHeader = ({ className }) => {
                         <GrGallery size={22} />
                     </button>
 
-                    <Profile openSetting={openSetting}/>
+                    <Profile openSetting={openSetting} />
 
 
 

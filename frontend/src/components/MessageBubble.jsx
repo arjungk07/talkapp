@@ -136,7 +136,7 @@ const ImageBubble = ({ message, isSent, selectedUser, longPressTriggered }) => {
 
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const MessageBubble = ({ message, onEmojiClick, onReply }) => {
+const MessageBubble = ({ message, onEmojiClick, onReply, searchQuery, registerMessageRef }) => {
   const { user, selectedUser } = useAuth();
   const {
     isShowMode, setIsShowMode,
@@ -379,6 +379,31 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
     }
     : { display: "none" };
 
+  const highlightText = (text, query) => {
+    if (!query) return text;
+
+    const regex = new RegExp(
+      `(${query})`,
+      "gi"
+    );
+
+    return text
+      .split(regex)
+      .map((part, index) =>
+        part.toLowerCase() ===
+          query.toLowerCase() ? (
+          <mark
+            key={index}
+            className="bg-yellow-300 rounded px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      );
+  };
+
 
   // ── Full picker: centered at bottom of screen ──────────────────────────────
   return (
@@ -484,6 +509,9 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
 
       {/* ── Bubble + Reactions ─────────────────────────────────────────────── */}
       <div
+        ref={(el) =>
+          registerMessageRef(message._id, el)
+        }
         className={`
           animate-bubble-pop
           max-w-[90%] sm:max-w-[75%] md:max-w-[50%]
@@ -494,6 +522,7 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
       >
         {/* replypreview / image / text / timestamp / emoji reaction ui section */}
         <div
+
           className={`
             relative overflow-visible flex flex-col gap-1 text-[15px] font-medium rounded-[14px] transition-all duration-300
             ${message.replyingTo ? "p-0.5" : hasAttachments ? "p-1" : "ps-5 pt-1 pe-3"}
@@ -524,7 +553,10 @@ const MessageBubble = ({ message, onEmojiClick, onReply }) => {
                 } leading-relaxed select-none md:select-text wrap-break-word cursor-text whitespace-pre-wrap ${isSent ? "text-white" : "text-chat-text"
                 }`}
             >
-              {message.text}
+              {highlightText(
+                message.text,
+                searchQuery
+              )}
             </p>
           )}
 

@@ -5,10 +5,96 @@ import ai from '../assets/image/talk_ai_icon.png';
 import { formatDistanceToNow } from "date-fns";
 import { useMessages } from "../hooks/useMessages";
 import { useAppContext } from "../context/AppContext";
+import {
+    ArrowLeft,
+    ChevronUp,
+    ChevronDown,
+    X,
+    Search,
+} from "lucide-react";
 
 
 
-const HeaderActionsBar = () => {
+
+export function SearchHeader({
+    searchQuery,
+    setSearchQuery,
+    currentMatchIndex,
+    totalMatches,
+    nextMatch,
+    prevMatch,
+    onClose,
+}) {
+    return (
+
+        <div className="flex items-center gap-4 px-3 py-3 border-b border-chat-panel">
+
+            <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-gray-100"
+            >
+                <ArrowLeft size={20} />
+            </button>
+
+            <div className="flex flex-1 items-center gap-2  bg-gray-100 rounded-full px-4 py-2 ">
+
+                <Search size={18} />
+
+                <input
+
+                    autoComplete="new-password"
+                    name={`search_${Date.now()}`}
+                    type="search"
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    value={searchQuery}
+                    onChange={(e) =>
+                        setSearchQuery(e.target.value)
+                    }
+                    placeholder="Search messages"
+                    className="w-full bg-transparent outline-none"
+                />
+
+                {/* {searchQuery && (
+                    <button
+                        onClick={() => setSearchQuery("")}
+                    >
+                        <X size={16} />
+                    </button>
+                )} */}
+            </div>
+
+            {searchQuery && (
+                <>
+                    <span className="text-xs text-gray-500 min-w-max">
+                        {totalMatches === 0
+                            ? "0"
+                            : `${currentMatchIndex + 1}/${totalMatches}`}
+                    </span>
+
+                    <button
+                        onClick={prevMatch}
+                        className="p-2 rounded-full hover:bg-gray-100"
+                    >
+                        <ChevronUp size={18} />
+                    </button>
+
+                    <button
+                        onClick={nextMatch}
+                        className="p-2 rounded-full hover:bg-gray-100"
+                    >
+                        <ChevronDown size={18} />
+                    </button>
+                </>
+            )}
+
+        </div>
+    );
+}
+
+
+const HeaderActionsBar = ({ openSearch }) => {
 
     const { isActive, setIsActive } = useAppContext();
 
@@ -17,7 +103,7 @@ const HeaderActionsBar = () => {
     };
     return (
         /* Main wrapper row holding both interactive utility zones */
-        <div className="flex items-center justify-end gap-2 p-2 bg-transparent">
+        <div className="flex items-center justify-end gap-4 bg-transparent">
 
             {/* 1.Ai button */}
             <button
@@ -46,13 +132,15 @@ const HeaderActionsBar = () => {
             </button>
 
             {/* 2. Search Action Container */}
-            <div className="flex items-center justify-center">
+            <div
+                onClick={openSearch}
+                className="flex items-center justify-center">
                 <button
                     type="button"
                     aria-label="Search"
                     aria-expanded="false"
                     tabIndex={0}
-                    className="flex items-center justify-center cursor-pointer p-2 text-gray-600 rounded-full transition-colors duration-200"
+                    className="flex items-center justify-center cursor-pointer  text-gray-600 rounded-full transition-colors duration-200"
                 >
                     <svg
                         viewBox="0 0 24 24"
@@ -76,7 +164,7 @@ const HeaderActionsBar = () => {
                     aria-expanded="false"
                     aria-haspopup="menu"
                     tabIndex={0}
-                    className="flex items-center justify-center cursor-pointer p-2 text-gray-600 rounded-full transition-colors duration-200 "
+                    className="flex items-center justify-center cursor-pointer  text-gray-600 rounded-full transition-colors duration-200 "
                 >
                     <svg
                         viewBox="0 0 24 24"
@@ -96,7 +184,8 @@ const HeaderActionsBar = () => {
 };
 
 
-const ChatHeader = () => {
+const ChatHeader = (props) => {
+    const { isSearchOpen, setIsSearchOpen, searchQuery, setSearchQuery, currentMatchIndex, totalMatches, nextMatch, prevMatch } = props;
     const { onlineUsers, selectedUser } = useAuth();
     const { isTyping } = useMessages(selectedUser);
 
@@ -105,59 +194,87 @@ const ChatHeader = () => {
     const DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQVKIxuwSqgJuFllKhvtMd6sOtm40ee3j-G3Dl2q9Gn3fRhPgo7mstwpYA&s=10";
 
 
+    const searchClose = () => {
+        props.setSearchQuery("");
+        props.setIsSearchOpen(false)
+    }
+
     return (
         <div>
             {/* CHAT HEADER */}
-            <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center  gap-3 shrink-0 z-50 md:z-0">
 
-                {/* user profile  */}
-                <div className="relative">
-                    {selectedUser.profilePic ? (
-                        // <img
-                        //     src={selectedUser.profilePic}
-                        //     alt={selectedUser.name}
-                        //     className="w-12 h-12 rounded-full object-cover border border-chat-border"
-                        // />
-                        <img
-                            src={selectedUser.profilePic || DEFAULT_AVATAR}
-                            alt="selectedUser.name"
-                            className="w-12 h-12 rounded-full object-cover border border-chat-border"
-                            onError={(e) => {
-                                // 1. Prevent the error from trying to load again
-                                e.target.onerror = null;
-                                // 2. Point the source to the fallback image
-                                e.target.src = DEFAULT_AVATAR;
-                            }}
+            {
+                isSearchOpen ? (
+                    <SearchHeader
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        currentMatchIndex={currentMatchIndex}
+                        totalMatches={totalMatches}
+                        nextMatch={nextMatch}
+                        prevMatch={prevMatch}
+                        onClose={searchClose}
+                    />
+                ) : (
+
+                    <header className="px-4 lg:px-6 py-2 border-b border-chat-border bg-chat-bg  flex items-center  gap-3 shrink-0 z-50 md:z-0">
+
+                        {/* user profile  */}
+                        <div className="relative">
+                            {selectedUser.profilePic ? (
+                                // <img
+                                //     src={selectedUser.profilePic}
+                                //     alt={selectedUser.name}
+                                //     className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                                // />
+                                <img
+                                    src={selectedUser.profilePic || DEFAULT_AVATAR}
+                                    alt="selectedUser.name"
+                                    className="w-12 h-12 rounded-full object-cover border border-chat-border"
+                                    onError={(e) => {
+                                        // 1. Prevent the error from trying to load again
+                                        e.target.onerror = null;
+                                        // 2. Point the source to the fallback image
+                                        e.target.src = DEFAULT_AVATAR;
+                                    }}
+                                />
+                            ) : (
+                                <FaUserAlt className="w-11 h-11 p-1 rounded-full bg-chat-surface text-chat-muted border border-chat-border" />
+                            )}
+
+                            {isOnline && (
+                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-chat-online rounded-full border-2 border-chat-panel" />
+                            )}
+                        </div>
+
+                        {/* user name and online status */}
+                        <div className="flex-1 flex flex-col justify-center">
+                            <p className="text-sm font-semibold text-chat-text google-sans">{selectedUser.name}</p>
+                            <p className="text-[9px] md:text-xs text-chat-muted">
+                                {isTyping ? (
+                                    <span className="text-chat-accent animate-pulse">typing...</span>
+                                ) : isOnline ? (
+                                    <span className="text-chat-online">Active now</span>
+                                ) : selectedUser?.lastSeen ? (
+                                    `seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
+                                ) : (
+                                    "Offline"
+                                )}
+                            </p>
+                        </div>
+
+                        <HeaderActionsBar
+                            openSearch={() => setIsSearchOpen(true)}
                         />
-                    ) : (
-                        <FaUserAlt className="w-11 h-11 p-1 rounded-full bg-chat-surface text-chat-muted border border-chat-border" />
-                    )}
 
-                    {isOnline && (
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-chat-online rounded-full border-2 border-chat-panel" />
-                    )}
-                </div>
+                    </header>
 
-                {/* user name and online status */}
-                <div className="flex-1 flex flex-col justify-center">
-                    <p className="text-sm font-semibold text-chat-text google-sans">{selectedUser.name}</p>
-                    <p className="text-[9px] md:text-xs text-chat-muted">
-                        {isTyping ? (
-                            <span className="text-chat-accent animate-pulse">typing...</span>
-                        ) : isOnline ? (
-                            <span className="text-chat-online">Active now</span>
-                        ) : selectedUser?.lastSeen ? (
-                            `seen ${formatDistanceToNow(new Date(selectedUser.lastSeen), { addSuffix: true })}`
-                        ) : (
-                            "Offline"
-                        )}
-                    </p>
-                </div>
-
-                <HeaderActionsBar />
+                )
+            }
 
 
-            </header>
+
+
+
         </div>
     )
 }

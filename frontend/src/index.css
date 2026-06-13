@@ -5,20 +5,23 @@
 
 
 
-html, body {
+html,
+body {
   /* Never let the browser scroll the page itself */
-  overflow: hidden;
   height: 100%;
   scroll-behavior: smooth;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
- 
+
 #root {
   height: 100%;
   overflow: hidden;
 }
- 
 
-.talkapp-font{
+
+.talkapp-font {
   font-family: "Playfair Display", serif;
   font-optical-sizing: auto;
   font-style: normal;
@@ -36,8 +39,10 @@ html, body {
 }
 
 .scrollbar-hide {
-  -ms-overflow-style: none; /* IE & Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE & Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 
@@ -59,6 +64,7 @@ html, body {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import imageCompression from "browser-image-compression";
 import api from "../utils/api";
+import { useAppContext } from "../context/AppContext";
 
 export const useMessages = (selectedUser) => {
   const { socket, user } = useAuth();
-  const [messages, setMessages] = useState([]);
+  const {messages, setMessages} = useAppContext();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -240,6 +241,10 @@ export const useMessages = (selectedUser) => {
     if (!text.trim() || !selectedUser || sending) return;
 
     setSending(true);
+
+    setMessages((prev) => [...prev , text]); //instant update 
+    setSending(false)
+
     try {
       const { data } = await api.post("/api/messages", {
         receiverId: selectedUser._id,
@@ -494,13 +499,11 @@ export const useMessages = (selectedUser) => {
   };
 
   return {
-    messages,
     loading,
     setLoading,
     sending,
     setSending,
     isTyping,
-    setMessages,
     sendMessage,
     uploadImage,
     sendReaction, // Added to return properties

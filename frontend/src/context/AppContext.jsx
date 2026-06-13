@@ -110,6 +110,7 @@ export const AppContextProvider = ({ children }) => {
         };
     }, [socket]);
 
+    const [messages, setMessages] = useState([]);
     const [isShowMode, setIsShowMode] = useState(false);
     const [showPicker, setShowPicker] = useState(null);
     const [isSelectMode, setIsSelectMode] = useState(false);
@@ -123,6 +124,8 @@ export const AppContextProvider = ({ children }) => {
     const value = {
         users,
         setUsers,
+        messages,
+        setMessages,
         isShowMode,
         setIsShowMode,
         isSelectMode,
